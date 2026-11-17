@@ -165,10 +165,14 @@ Catatan: Jika Anda menggunakan installer otomatis `install.bat`, langkah ini sud
 Setelah pemasangan selesai, lakukan pengujian untuk memastikan komunikasi berjalan lancar:
 
 ```bash
-# 1. Uji koneksi jembatan dan pembuatan lencana teks di kanvas
+# 1. Menjalankan diagnosis mandiri kesehatan lingkungan
+python check.py
+# (Pada Windows, Anda juga bisa klik ganda check.bat)
+
+# 2. Uji koneksi jembatan dan pembuatan lencana teks di kanvas
 python test_connection.py
 
-# 2. Uji konversi data desain visual menjadi kode React Tailwind
+# 3. Uji konversi data desain visual menjadi kode React Tailwind
 python test_design_to_code.py
 ```
 
@@ -177,6 +181,11 @@ Lihat jendela aplikasi FigCraft Anda: lencana pengujian akan otomatis muncul dan
 ---
 
 ## 7. Pemecahan Masalah dan Tanya Jawab (FAQ)
+
+Sebelum memeriksa masalah satu per satu, jalankan skrip diagnosis untuk mendeteksi penyebabnya secara otomatis:
+```bash
+python check.py
+```
 
 ### Masalah 1: Muncul pesan error 'python' is not recognized
 - **Penyebab**: Python belum terdaftar pada variabel sistem PATH di komputer Anda.

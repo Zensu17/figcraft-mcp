@@ -34,6 +34,9 @@ Through the Model Context Protocol (MCP), this bridge unlocks a complete two-way
 figcraft-mcp/
 |-- bridge.py                # Smart MCP bridge (handles lazy launch and dynamic path discovery)
 |-- codegen_helper.py        # AST cleaner and tokenizer for Design-to-Code translation
+|-- check.py                 # Standalone system and environment self-diagnosis tool
+|-- check.bat                # 1-click health check runner for Windows
+|-- check.sh                 # 1-click health check runner for macOS and Linux
 |-- install.py               # Cross-platform installation and configuration script
 |-- install.bat              # 1-click Windows installer
 |-- install.sh               # 1-click macOS and Linux installer
@@ -97,13 +100,17 @@ Select any frame or component in FigCraft, then prompt your AI:
 
 ## Testing and Verification
 
-Verify that your bridge and code generation pipeline are working properly by running these two automated tests:
+Verify that your environment, bridge, and code generation pipeline are working properly:
 
 ```bash
-# 1. Test MCP connection and create a test badge on the FigCraft canvas
+# 1. Run self-diagnosis to verify Python, FigCraft paths, and AI configurations
+python check.py
+# (On Windows, you can also simply double-click check.bat)
+
+# 2. Test MCP connection and create a test badge on the FigCraft canvas
 python test_connection.py
 
-# 2. Test the Design-to-Code extraction and code generation pipeline
+# 3. Test the Design-to-Code extraction and code generation pipeline
 python test_design_to_code.py
 ```
 

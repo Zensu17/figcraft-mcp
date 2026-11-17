@@ -164,10 +164,14 @@ Note: If you run `install.bat`, this shortcut configuration is performed automat
 Once installation is finished, run these verification commands to ensure communication works smoothly:
 
 ```bash
-# 1. Test MCP handshake and canvas badge drawing
+# 1. Run automated environment health check
+python check.py
+# (On Windows, double-click check.bat)
+
+# 2. Test MCP handshake and canvas badge drawing
 python test_connection.py
 
-# 2. Test Design-to-Code visual token conversion
+# 3. Test Design-to-Code visual token conversion
 python test_design_to_code.py
 ```
 
@@ -176,6 +180,11 @@ Look at your FigCraft window: the test elements will be drawn live on the active
 ---
 
 ## 7. Troubleshooting & FAQ
+
+Before troubleshooting individual issues, run the diagnostic tool to automatically identify the cause:
+```bash
+python check.py
+```
 
 ### Issue 1: Error 'python' is not recognized
 - **Cause**: Python is not included in your operating system PATH environment variable.

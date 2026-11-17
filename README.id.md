@@ -34,6 +34,9 @@ Melalui integrasi Model Context Protocol (MCP), Anda mendapatkan alur kerja dua 
 figcraft-mcp/
 |-- bridge.py                # Jembatan cerdas MCP (lazy launch dan resolusi jalur otomatis)
 |-- codegen_helper.py        # Pembersih AST dan tokenizer untuk konversi Desain-ke-Kode
+|-- check.py                 # Alat diagnosis mandiri status sistem dan konfigurasi AI
+|-- check.bat                # Runner 1-klik diagnosis kesehatan untuk Windows
+|-- check.sh                 # Runner 1-klik diagnosis kesehatan untuk macOS dan Linux
 |-- install.py               # Logika pemasang otomatis lintas platform
 |-- install.bat              # Pemasang 1-klik untuk Windows
 |-- install.sh               # Pemasang 1-klik untuk macOS dan Linux
@@ -97,13 +100,17 @@ Pilih elemen di kanvas FigCraft, lalu minta AI untuk membacanya:
 
 ## Pengujian dan Verifikasi
 
-Pastikan koneksi jembatan berfungsi dengan menjalankan dua skrip uji berikut di terminal:
+Pastikan kesehatan sistem, koneksi jembatan, dan alur pembuatan kode berfungsi dengan menjalankan pengujian berikut:
 
 ```bash
-# 1. Menguji koneksi MCP dan membuat badge penanda di kanvas FigCraft
+# 1. Menjalankan diagnosis mandiri status Python, lokasi FigCraft, dan konfigurasi AI
+python check.py
+# (Pada Windows, Anda juga cukup klik ganda check.bat)
+
+# 2. Menguji koneksi MCP dan membuat badge penanda di kanvas FigCraft
 python test_connection.py
 
-# 2. Menguji alur pembacaan desain dan pembuatan kode React
+# 3. Menguji alur pembacaan desain dan pembuatan kode React
 python test_design_to_code.py
 ```
 
