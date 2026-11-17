@@ -46,6 +46,8 @@ figcraft-mcp/
 |-- docs/                    # Dokumentasi arsitektur dan spesifikasi teknis
 |-- INSTALLATION.md          # Panduan instalasi lengkap (Bahasa Inggris)
 |-- INSTALLATION.id.md       # Panduan instalasi lengkap (Bahasa Indonesia)
+|-- PROMPTS.md               # Kumpulan formula prompt siap pakai (Bahasa Inggris)
+|-- PROMPTS.id.md            # Kumpulan formula prompt siap pakai (Bahasa Indonesia)
 |-- README.md                # Dokumentasi utama (Bahasa Inggris)
 `-- README.id.md             # Dokumentasi utama (Bahasa Indonesia)
 ```
@@ -72,6 +74,8 @@ Untuk panduan pemasangan manual atau konfigurasi lanjutan, silakan baca [PANDUAN
 ---
 
 ## Cara Penggunaan
+
+Untuk kumpulan formula prompt siap pakai pada 6 kategori antarmuka, lihat panduan **[PROMPTS.id.md](./PROMPTS.id.md)**.
 
 Setelah terpasang, buka asisten AI yang Anda gunakan (AntiGravity, Cursor, OpenCode, atau Claude Desktop).
 

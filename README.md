@@ -46,6 +46,8 @@ figcraft-mcp/
 |-- docs/                    # Architecture documentation and technical specifications
 |-- INSTALLATION.md          # Comprehensive installation guide (English)
 |-- INSTALLATION.id.md       # Comprehensive installation guide (Bahasa Indonesia)
+|-- PROMPTS.md               # Ready-to-use prompt formula cheat sheet (English)
+|-- PROMPTS.id.md            # Ready-to-use prompt formula cheat sheet (Bahasa Indonesia)
 |-- README.md                # Primary project overview (English)
 `-- README.id.md             # Primary project overview (Bahasa Indonesia)
 ```
@@ -72,6 +74,8 @@ For manual setup instructions, step-by-step configuration for individual AI clie
 ---
 
 ## How to Use
+
+For ready-to-use copy-pasteable prompt formulas across 6 core UI categories, see **[PROMPTS.md](./PROMPTS.md)**.
 
 Once installed, open your preferred AI assistant (AntiGravity, Cursor, OpenCode, or Claude Desktop).
 
