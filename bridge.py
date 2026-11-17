@@ -24,6 +24,13 @@ from pathlib import Path
 
 DEFAULT_PORT = int(os.environ.get("FIGCRAFT_PORT", "1984"))
 HOST = "127.0.0.1"
+LOG_FILE = Path(__file__).resolve().parent / "figcraft_bridge.log"
+
+
+def log_debug(msg):
+    if os.environ.get("FIGCRAFT_DEBUG"):
+        with open(LOG_FILE, "a", encoding="utf-8") as f:
+            f.write(f"[{time.strftime('%X')}] {msg}\n")
 
 
 def find_figcraft_binaries():
@@ -198,6 +205,7 @@ class LazyMcpBridge:
                 except Exception:
                     pass
 
+            log_debug("Switching to attached mode (tools/call detected)")
             # Launch FigCraft GUI on demand
             gui_ready = ensure_figcraft_running(self.gui_path, self.port)
 

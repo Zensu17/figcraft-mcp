@@ -205,7 +205,7 @@ def setup_windows_shortcut():
     if platform.system() != "Windows":
         return
 
-    print_step("Configuring Windows Start Menu Shortcut...")
+    print_step("Configuring Windows Shortcuts (Start Menu & Desktop)...")
     try:
         from bridge import find_figcraft_binaries
         gui_path, _ = find_figcraft_binaries()
@@ -217,22 +217,98 @@ def setup_windows_shortcut():
         if not appdata:
             return
 
-        shortcut_path = Path(appdata) / "Microsoft" / "Windows" / "Start Menu" / "Programs" / "FigCraft.lnk"
-        
-        # PowerShell script to create/update shortcut
-        ps_script = f"""
-        $sh = New-Object -ComObject WScript.Shell
-        $sc = $sh.CreateShortcut('{shortcut_path}')
-        $sc.TargetPath = '{gui_path}'
-        $sc.Arguments = '--control 1984'
-        $sc.WorkingDirectory = '{gui_path.parent}'
-        $sc.Description = 'FigCraft (AI Controlled)'
-        $sc.Save()
-        """
-        subprocess.run(["powershell", "-NoProfile", "-Command", ps_script], capture_output=True, check=False)
-        print_ok(f"Start Menu shortcut updated with '--control 1984': {shortcut_path}")
+        candidate_shortcuts = [
+            Path(appdata) / "Microsoft" / "Windows" / "Start Menu" / "Programs" / "FigCraft.lnk",
+            Path.home() / "Desktop" / "FigCraft.lnk",
+        ]
+        public_desktop = os.environ.get("PUBLIC")
+        if public_desktop:
+            candidate_shortcuts.append(Path(public_desktop) / "Desktop" / "FigCraft.lnk")
+
+        for shortcut_path in candidate_shortcuts:
+            # Update existing shortcut or always ensure the start menu shortcut exists
+            if shortcut_path.exists() or "Start Menu" in str(shortcut_path):
+                ps_script = f"""
+                $sh = New-Object -ComObject WScript.Shell
+                $sc = $sh.CreateShortcut('{shortcut_path}')
+                $sc.TargetPath = '{gui_path}'
+                $sc.Arguments = '--control 1984'
+                $sc.WorkingDirectory = '{gui_path.parent}'
+                $sc.Description = 'FigCraft (AI Controlled)'
+                $sc.Save()
+                """
+                subprocess.run(["powershell", "-NoProfile", "-Command", ps_script], capture_output=True, check=False)
+                print_ok(f"Shortcut updated with '--control 1984': {shortcut_path}")
     except Exception as e:
-        print_warn(f"Notice updating Start Menu shortcut: {e}")
+        print_warn(f"Notice updating shortcuts: {e}")
+
+
+def uninstall():
+    print("\033[1;33m==> Uninstalling FigCraft MCP configuration from all AI tools...\033[0m")
+    
+    # AntiGravity
+    ag_cfg = Path.home() / ".gemini" / "config" / "mcp_config.json"
+    if ag_cfg.exists():
+        try:
+            with open(ag_cfg, "r", encoding="utf-8") as f:
+                d = json.load(f)
+            if "FigCraft" in d.get("mcpServers", {}):
+                del d["mcpServers"]["FigCraft"]
+                with open(ag_cfg, "w", encoding="utf-8") as f:
+                    json.dump(d, f, indent=2)
+                print_ok("Removed FigCraft from AntiGravity")
+        except Exception as e:
+            print_warn(f"Error removing from AntiGravity: {e}")
+
+    # OpenCode
+    oc_cfg = Path.home() / ".config" / "opencode" / "opencode.json"
+    if oc_cfg.exists():
+        try:
+            with open(oc_cfg, "r", encoding="utf-8") as f:
+                d = json.load(f)
+            mcp = d.get("mcp", {})
+            mcp.pop("FigCraft", None)
+            mcp.get("servers", {}).pop("FigCraft", None)
+            with open(oc_cfg, "w", encoding="utf-8") as f:
+                json.dump(d, f, indent=2)
+            print_ok("Removed FigCraft from OpenCode")
+        except Exception as e:
+            print_warn(f"Error removing from OpenCode: {e}")
+
+    # Cursor
+    cur_cfg = Path.home() / ".cursor" / "mcp.json"
+    if cur_cfg.exists():
+        try:
+            with open(cur_cfg, "r", encoding="utf-8") as f:
+                d = json.load(f)
+            if "FigCraft" in d.get("mcpServers", {}):
+                del d["mcpServers"]["FigCraft"]
+                with open(cur_cfg, "w", encoding="utf-8") as f:
+                    json.dump(d, f, indent=2)
+                print_ok("Removed FigCraft from Cursor")
+        except Exception as e:
+            print_warn(f"Error removing from Cursor: {e}")
+
+    # Claude Desktop
+    claude_cfg = None
+    if platform.system() == "Windows" and os.environ.get("APPDATA"):
+        claude_cfg = Path(os.environ["APPDATA"]) / "Claude" / "claude_desktop_config.json"
+    elif platform.system() == "Darwin":
+        claude_cfg = Path.home() / "Library" / "Application Support" / "Claude" / "claude_desktop_config.json"
+
+    if claude_cfg and claude_cfg.exists():
+        try:
+            with open(claude_cfg, "r", encoding="utf-8") as f:
+                d = json.load(f)
+            if "FigCraft" in d.get("mcpServers", {}):
+                del d["mcpServers"]["FigCraft"]
+                with open(claude_cfg, "w", encoding="utf-8") as f:
+                    json.dump(d, f, indent=2)
+                print_ok("Removed FigCraft from Claude Desktop")
+        except Exception as e:
+            print_warn(f"Error removing from Claude Desktop: {e}")
+
+    print("\n\033[1;32m✔ FigCraft MCP successfully uninstalled from all AI tools.\033[0m\n")
 
 
 def main():
@@ -242,6 +318,10 @@ def main():
     print(f"System:  {platform.system()} ({platform.machine()})")
     print(f"Python:  {sys.executable}")
     print(f"Bridge:  {BRIDGE_PATH}")
+
+    if "--uninstall" in sys.argv:
+        uninstall()
+        return
 
     # Validate bridge import
     try:
