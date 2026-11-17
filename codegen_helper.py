@@ -51,22 +51,57 @@ def clean_node(node: dict) -> dict:
     # Auto Layout properties
     layout = node.get("layout")
     if layout:
-        cleaned["direction"] = "col" if layout == "vertical" else "row"
-        if "gap" in node:
-            cleaned["gap"] = round(node["gap"])
-        if "padding" in node:
-            cleaned["p"] = round(node["padding"])
-        if "mainAlign" in node:
-            align_map = {"start": "start", "center": "center", "end": "end", "space-between": "between"}
-            cleaned["justify"] = align_map.get(node["mainAlign"], node["mainAlign"])
-        if "crossAlign" in node:
-            cleaned["items"] = node["crossAlign"]
+        # FigCraft engine stores layout as a dict: {"mode": "vertical"|"horizontal", "gap": float, "padding": [...], ...}
+        if isinstance(layout, dict):
+            mode = layout.get("mode", "vertical")
+            cleaned["direction"] = "col" if mode == "vertical" else "row"
+            if "gap" in layout:
+                cleaned["gap"] = round(layout["gap"])
+            if "padding" in layout:
+                p_val = layout["padding"]
+                if isinstance(p_val, list) and p_val:
+                    cleaned["p"] = round(p_val[0])
+                elif isinstance(p_val, (int, float)):
+                    cleaned["p"] = round(p_val)
+            align_map = {"min": "start", "max": "end", "start": "start", "end": "end", "center": "center", "spaceBetween": "between", "space-between": "between"}
+            if "mainAlign" in layout:
+                cleaned["justify"] = align_map.get(layout["mainAlign"], layout["mainAlign"])
+            if "crossAlign" in layout:
+                cleaned["items"] = align_map.get(layout["crossAlign"], layout["crossAlign"])
+        else:
+            cleaned["direction"] = "col" if str(layout).lower() == "vertical" else "row"
+            if "gap" in node:
+                cleaned["gap"] = round(node["gap"])
+            if "padding" in node:
+                p_val = node["padding"]
+                cleaned["p"] = round(p_val[0]) if isinstance(p_val, list) else round(p_val)
+            align_map = {"min": "start", "max": "end", "start": "start", "end": "end", "center": "center", "spaceBetween": "between", "space-between": "between"}
+            if "mainAlign" in node:
+                cleaned["justify"] = align_map.get(node["mainAlign"], node["mainAlign"])
+            if "crossAlign" in node:
+                cleaned["items"] = align_map.get(node["crossAlign"], node["crossAlign"])
+
+    # Strokes / Borders
+    strokes = node.get("strokes", [])
+    if strokes and isinstance(strokes, list):
+        for s in strokes:
+            if isinstance(s, dict) and s.get("type") == "solid" and "color" in s:
+                cleaned["borderColor"] = s["color"]
+                break
+    elif node.get("stroke") and isinstance(node["stroke"], str):
+        cleaned["borderColor"] = node["stroke"]
+
+    stroke_weight = node.get("strokeWeight") or node.get("strokeWidth")
+    if stroke_weight:
+        cleaned["borderWidth"] = round(stroke_weight)
 
     # Typography / Text layer
-    if node_type == "text" or "text" in node:
-        cleaned["text"] = node.get("text", "")
+    if node_type == "text" or "text" in node or "characters" in node:
+        cleaned["text"] = node.get("characters") or node.get("text", "")
         if "fontSize" in node:
             cleaned["fontSize"] = round(node["fontSize"])
+        if "fontStyle" in node:
+            cleaned["fontStyle"] = node["fontStyle"]
         # Text color from fills
         if "bg" in cleaned:
             cleaned["color"] = cleaned.pop("bg")
@@ -155,7 +190,7 @@ def run_self_test():
                 "id": 58,
                 "name": "Location",
                 "type": "TEXT",
-                "text": "📍 Jakarta, Indonesia",
+                "text": "Jakarta, Indonesia",
                 "fontSize": 12.0,
                 "fills": [{"type": "solid", "color": "#94A3B8"}],
                 "absoluteBounds": {"x": 120.0, "y": 660.0, "width": 120.0, "height": 16.0},
@@ -172,13 +207,13 @@ def run_self_test():
     assert len(cleaned["children"]) == 1
     child = cleaned["children"][0]
     assert child["type"] == "text"
-    assert child["text"] == "📍 Jakarta, Indonesia"
+    assert child["text"] == "Jakarta, Indonesia"
     assert child["color"] == "#94A3B8"
 
     raw_len = len(json.dumps(raw_sample))
     clean_len = len(json.dumps(cleaned))
     reduction = ((raw_len - clean_len) / raw_len) * 100
-    print(f"✔ Self-test passed! AST Cleaned successfully ({reduction:.1f}% token reduction)")
+    print(f"[PASS] Self-test passed! AST Cleaned successfully ({reduction:.1f}% token reduction)")
     return True
 
 

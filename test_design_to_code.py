@@ -89,7 +89,7 @@ def main():
             {
                 "type": "text",
                 "name": "Location",
-                "text": "📍 Jakarta, Indonesia",
+                "text": "Jakarta, Indonesia",
                 "fontSize": 12,
                 "color": "#94A3B8"
             },
@@ -110,7 +110,7 @@ def main():
                     {
                         "type": "text",
                         "name": "Condition",
-                        "text": "⛅ Sebagian Berawan",
+                        "text": "Sebagian Berawan",
                         "fontSize": 13,
                         "color": "#38BDF8"
                     }
@@ -126,21 +126,21 @@ def main():
                     {
                         "type": "text",
                         "name": "Humidity",
-                        "text": "💧 78%",
+                        "text": "78% Kelembapan",
                         "fontSize": 11,
                         "color": "#94A3B8"
                     },
                     {
                         "type": "text",
                         "name": "Wind",
-                        "text": "💨 14 km/j",
+                        "text": "14 km/j",
                         "fontSize": 11,
                         "color": "#94A3B8"
                     },
                     {
                         "type": "text",
                         "name": "UV Index",
-                        "text": "☀️ UV Sedang",
+                        "text": "UV Sedang",
                         "fontSize": 11,
                         "color": "#94A3B8"
                     }
@@ -167,16 +167,16 @@ export default function WeatherWidget() {{
     with open(out_file, "w", encoding="utf-8") as f:
         f.write(component_code)
 
-    print(f"  ✔ Generated Component saved to: {out_file}")
+    print(f"  [OK] Generated Component saved to: {out_file}")
 
     # Assertions
     assert "export default function WeatherWidget" in component_code
     assert "bg-[#1E293B]" in component_code
     assert "rounded-[20px]" in component_code
-    assert "📍 Jakarta, Indonesia" in component_code
+    assert "Jakarta, Indonesia" in component_code
     assert "29°C" in component_code
-    assert "⛅ Sebagian Berawan" in component_code
-    assert "💧 78%" in component_code
+    assert "Sebagian Berawan" in component_code
+    assert "78% Kelembapan" in component_code
 
     print("\n\033[1;32m=== Design-to-Code Pipeline Verified Successfully! ===\033[0m\n")
 

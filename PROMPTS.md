@@ -182,3 +182,4 @@ Analyze all color palettes and typography sizes used across this FigCraft canvas
 2. **Explicitly State Flex Directions**: Always mention whether container elements should arrange their children vertically (`flex-col`) or horizontally (`flex-row`).
 3. **Provide Hex Color Codes**: For consistent branding, provide exact hex color values (e.g. `#4F46E5` for indigo, `#0F172A` for slate).
 4. **Avoid One-Line Prompts**: A prompt like "make a nice button" will generate generic default elements. A prompt like "create a primary CTA button, full-width, height 44px, indigo background #4F46E5, radius 8px, bold white text centered" yields pixel-accurate results.
+5. **Use Transparent Layout Wrappers**: When grouping buttons, text links, or metrics (flex rows/cols), ensure wrapper containers use transparent fills (`fill: 'none'`) so FigCraft does not apply its solid white default fill over dark themes.

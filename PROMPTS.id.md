@@ -182,3 +182,4 @@ Analisis seluruh palet warna dan ukuran tipografi yang digunakan pada halaman ka
 2. **Spesifikasikan Mode Layout**: Selalu sebutkan apakah susunan elemen bersifat vertikal (`flex-col`) atau horizontal (`flex-row`).
 3. **Cantumkan Kode Warna Hex**: Jika Anda memiliki pedoman merek (brand guideline), berikan kode hex langsung (contoh: `#4F46E5` untuk indigo, `#0F172A` untuk slate).
 4. **Hindari Perintah Terlalu Singkat**: Perintah seperti "buatkan tombol bagus" akan menghasilkan elemen default generik. Perintah seperti "buat tombol aksi utama lebar penuh, tinggi 44px, latar biru indigo, radius 8px, teks putih rata tengah" akan menghasilkan desain yang presisi.
+5. **Gunakan Kontainer Transparan untuk Tata Letak**: Saat mengelompokkan tombol atau baris tautan (flex row/col), instruksikan agar kontainer pembungkus tidak memiliki warna latar (`fill: 'none'`) agar tidak muncul balok putih default yang menimpa latar belakang tema gelap.

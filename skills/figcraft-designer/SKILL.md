@@ -10,10 +10,17 @@ FigCraft is an open-source, pure-Rust collaborative interface design tool that s
 ## Coordinate & Layout Rules
 - **Coordinates**: Page units (1 unit = 1 px at 100% zoom). X goes right, Y goes DOWN.
 - **Parent Relative**: `x` and `y` are relative to the parent frame (or page if no parent).
-- **Auto-Layout**:
-  - Always prefer auto-layout for production UI: `layout: "vertical"` or `"horizontal"`.
-  - Configure `gap`, `padding`, `mainAlign` (`"start"`, `"center"`, `"end"`, `"space-between"`), and `crossAlign`.
+- **Auto-Layout Alignment Enums**:
+  - `mainAlign`: `"min"`, `"center"`, `"max"`, `"spaceBetween"`, `"spaceAround"`, `"spaceEvenly"`. Note: do NOT use `"start"` or `"end"` (use `"min"` / `"max"`).
+  - `crossAlign`: `"min"`, `"center"`, `"max"`, `"baseline"`. Note: do NOT use `"start"` or `"end"` (use `"min"` / `"max"`).
   - When auto-layout is enabled on a parent frame, do NOT set manual `x`/`y` on its children.
+- **MANDATORY: Transparent Layout Wrappers (`fill: "none"`)**:
+  - In FigCraft, any frame created without an explicit `fill` property defaults to solid opaque white (`#FFFFFF`).
+  - Therefore, you MUST explicitly specify `fill: "none"` for all structural wrapper frames (flex rows, columns, button groups, metric rows) unless an opaque background card color is specifically intended. Failure to set `fill: "none"` will result in opaque white rectangles covering dark-mode layouts.
+
+## Property Naming Reference
+- **Border Stroke**: Use `stroke` (hex color) and `strokeWeight` (number, NOT `strokeWidth`).
+- **Typography**: Use `fontSize` (number), `fill` (text color), and `fontStyle` (`"Bold"`, `"SemiBold"`, `"Medium"`, `"Regular"`). Do not use `fontWeight: 700` (use `fontStyle: "Bold"` instead).
 
 ## Best Practices
 1. **Single Undo Batching**:

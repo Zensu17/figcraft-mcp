@@ -31,15 +31,15 @@ def print_step(title):
 
 
 def print_ok(msg):
-    print(f"  \033[32m✔\033[0m {msg}")
+    print(f"  \033[32m[OK]\033[0m {msg}")
 
 
 def print_warn(msg):
-    print(f"  \033[33m!\033[0m {msg}")
+    print(f"  \033[33m[WARN]\033[0m {msg}")
 
 
 def print_err(msg):
-    print(f"  \033[31m✖\033[0m {msg}")
+    print(f"  \033[31m[FAIL]\033[0m {msg}")
 
 
 def configure_antigravity():
@@ -308,7 +308,7 @@ def uninstall():
         except Exception as e:
             print_warn(f"Error removing from Claude Desktop: {e}")
 
-    print("\n\033[1;32m✔ FigCraft MCP successfully uninstalled from all AI tools.\033[0m\n")
+    print("\n\033[1;32m[OK] FigCraft MCP successfully uninstalled from all AI tools.\033[0m\n")
 
 
 def main():

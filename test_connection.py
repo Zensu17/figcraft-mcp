@@ -46,7 +46,7 @@ def main():
             1,
         )
         server_info = init_res.get("result", {}).get("serverInfo", {})
-        print(f"  ✔ Connected to: {server_info.get('title')} v{server_info.get('version')}")
+        print(f"  [OK] Connected to: {server_info.get('title')} v{server_info.get('version')}")
 
         proc.stdin.write(json.dumps({"jsonrpc": "2.0", "method": "notifications/initialized"}) + "\n")
         proc.stdin.flush()
@@ -55,7 +55,7 @@ def main():
         print("\n[2/3] Querying MCP Tools...")
         tools_res = send_rpc("tools/list", {}, 2)
         tools = [t["name"] for t in tools_res.get("result", {}).get("tools", [])]
-        print(f"  ✔ Total {len(tools)} tools available: {', '.join(tools[:5])}...")
+        print(f"  [OK] Total {len(tools)} tools available: {', '.join(tools[:5])}...")
 
         # 3. Create Demo Badge
         print("\n[3/3] Drawing Test Element in FigCraft...")
@@ -91,14 +91,14 @@ def main():
                     "parent": badge_id,
                     "type": "text",
                     "name": "Badge Text",
-                    "text": "✦ FigCraft MCP Connected! ✦",
+                    "text": "[FigCraft MCP Connected]",
                     "props": {"fill": "#FFFFFF", "fontSize": 12},
                 },
             },
             4,
         )
 
-        print(f"  ✔ Successfully created Test Badge on FigCraft canvas!")
+        print(f"  [OK] Successfully created Test Badge on FigCraft canvas!")
         print("\n\033[1;32m=== All Tests Passed! FigCraft MCP is 100% Ready! ===\033[0m\n")
 
     except Exception as e:
