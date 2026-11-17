@@ -1,171 +1,146 @@
-# Panduan Lengkap Pemasangan (Installation Guide)
+# FigCraft MCP Installation Guide / Panduan Pemasangan
 
-Panduan langkah demi langkah untuk memasang dan menghubungkan **FigCraft Universal MCP Bridge** ke berbagai AI Coding Assistant di komputer Anda atau rekan Anda.
-
----
-
-## Daftar Isi
-1. [Prasyarat Sistem](#1-prasyarat-sistem)
-2. [Unduh Repositori](#2-unduh-repositori)
-3. [Metode 1: Pemasangan Otomatis (Rekomendasi)](#3-metode-1-pemasangan-otomatis-rekomendasi)
-4. [Metode 2: Pemasangan Manual per AI Client](#4-metode-2-pemasangan-manual-per-ai-client)
-   - [Google AntiGravity (CLI & IDE)](#a-google-antigravity-cli--ide)
-   - [OpenCode CLI](#b-opencode-cli)
-   - [Cursor IDE](#c-cursor-ide)
-   - [Claude Desktop](#d-claude-desktop)
-5. [Konfigurasi Shortcut FigCraft Desktop (Windows)](#5-konfigurasi-shortcut-figcraft-desktop-windows)
-6. [Pengujian & Verifikasi Koneksi](#6-pengujian--verifikasi-koneksi)
-7. [Penyelesaian Masalah (Troubleshooting)](#7-penyelesaian-masalah-troubleshooting)
-8. [Referensi Tool MCP FigCraft](#8-referensi-tool-mcp-figcraft)
+[English](#english) | [Bahasa Indonesia](#bahasa-indonesia)
 
 ---
 
-## 1. Prasyarat Sistem
+<a name="english"></a>
+## English
 
-Sebelum memulai, pastikan dua aplikasi ini sudah terpasang di komputer:
+Comprehensive step-by-step installation guide for **FigCraft Universal MCP Bridge**.
 
-### A. Python 3.8 ke atas
-- Unduh dari situs resmi [python.org](https://www.python.org/downloads/).
-- **PENTING (Khusus Windows)**: Saat menjalankan installer Python, pastikan memberi centang pada opsi **"Add python.exe to PATH"** di halaman awal installer.
-- Periksa di terminal:
+### Table of Contents
+1. [Prerequisites](#1-prerequisites)
+2. [Download / Clone Repository](#2-download--clone)
+3. [Method 1: Automatic 1-Click Install (Recommended)](#3-method-1-automatic-1-click-install)
+4. [Method 2: Manual Setup per AI Client](#4-method-2-manual-setup)
+5. [Windows Desktop Shortcut Setup](#5-windows-desktop-shortcut)
+6. [Testing & Verification](#6-testing--verification)
+7. [Troubleshooting & FAQ](#7-troubleshooting--faq)
+8. [Available MCP Tools Reference](#8-mcp-tools-reference)
+
+---
+
+### 1. Prerequisites
+
+Before installing, ensure the following are installed on your computer:
+
+#### A. Python 3.8 or Higher
+- Download from the official website [python.org](https://www.python.org/downloads/).
+- **IMPORTANT (Windows only)**: During installation, check the box: **"Add python.exe to PATH"**.
+- Verify in terminal:
   ```bash
   python --version
   ```
 
-### B. Aplikasi FigCraft
-- Pastikan FigCraft telah terpasang. Di Windows, installer resmi meletakkan program di:
-  `C:\Program Files\ArtCraft\FigCraft\` (berisi `figcraft.exe` dan `figcraft-cli.exe`).
-- Jika Anda memasangnya di direktori non-standar, cukup daftarkan foldernya ke PATH sistem atau atur variabel lingkungan `FIGCRAFT_PATH` dan `FIGCRAFT_CLI_PATH`.
+#### B. FigCraft Desktop App & CLI
+- Download and install FigCraft. On Windows, the default installation directory is:  
+  `C:\Program Files\ArtCraft\FigCraft\` (containing `figcraft.exe` and `figcraft-cli.exe`).
+- If installed in a custom location, ensure it is added to your system `PATH` or set the environment variables `FIGCRAFT_PATH` and `FIGCRAFT_CLI_PATH`.
 
 ---
 
-## 2. Unduh Repositori
+### 2. Download / Clone
 
-Pilih salah satu cara:
-
-### Cara A: Menggunakan Git (Direkomendasikan)
-Buka terminal dan jalankan:
+#### Option A: Using Git (Recommended)
 ```bash
-git clone https://github.com/<username-anda>/figcraft-mcp.git
+git clone https://github.com/Zensu17/figcraft-mcp.git
 cd figcraft-mcp
 ```
 
-### Cara B: Download ZIP
-1. Buka halaman GitHub repositori.
-2. Klik tombol hijau **Code** > **Download ZIP**.
-3. Ekstrak file ZIP ke folder pilihan Anda (misal `D:\Code\figcraft-mcp` atau `C:\Projects\figcraft-mcp`).
-4. Buka terminal di dalam folder hasil ekstraksi tersebut.
+#### Option B: Download ZIP
+1. Go to the repository page on GitHub.
+2. Click **Code** > **Download ZIP**.
+3. Extract the ZIP archive to your desired directory (e.g., `D:\Code\figcraft-mcp`).
+4. Open a terminal inside that folder.
 
 ---
 
-## 3. Metode 1: Pemasangan Otomatis (Rekomendasi)
+### 3. Method 1: Automatic 1-Click Install
 
-Installer otomatis akan mendeteksi path Python Anda, mencari instalasi FigCraft, dan menulis konfigurasi ke semua AI client yang terpasang di komputer Anda.
+The installer detects your Python executable, locates FigCraft, and writes the configuration to all installed AI assistants.
 
-### Di Windows
-Cukup **klik ganda** file `install.bat`, atau jalankan di Command Prompt / PowerShell:
+#### On Windows:
+Double-click **`install.bat`**, or run:
 ```powershell
 python install.py
 ```
 
-### Di macOS / Linux
-Jalankan script bash:
+#### On macOS / Linux:
 ```bash
 chmod +x install.sh
 ./install.sh
 ```
 
-**Apa yang dilakukan installer ini secara otomatis?**
-1. Mencari file `figcraft.exe` dan `figcraft-cli.exe` di sistem Anda.
-2. Mendaftarkan server MCP ke file config Google AntiGravity: `~/.gemini/config/mcp_config.json`.
-3. Mendaftarkan server MCP ke file config OpenCode: `~/.config/opencode/opencode.json` (dan menjalankan `opencode mcp add` jika OpenCode ada di PATH).
-4. Mendaftarkan server MCP ke file config Cursor: `~/.cursor/mcp.json`.
-5. Mendaftarkan server MCP ke Claude Desktop (jika terpasang).
-6. Di Windows: Memperbarui shortcut Start Menu FigCraft agar selalu membuka dengan parameter `--control 1984`.
+**What the installer does automatically:**
+1. Verifies `figcraft.exe` and `figcraft-cli.exe` locations.
+2. Registers FigCraft in Google AntiGravity: `~/.gemini/config/mcp_config.json`.
+3. Registers FigCraft in OpenCode CLI: `~/.config/opencode/opencode.json`.
+4. Registers FigCraft in Cursor IDE: `~/.cursor/mcp.json`.
+5. Registers FigCraft in Claude Desktop (if installed).
+6. Updates Windows Start Menu and Desktop shortcuts to include `--control 1984`.
 
 ---
 
-## 4. Metode 2: Pemasangan Manual per AI Client
+### 4. Method 2: Manual Setup
 
-Jika Anda ingin mengonfigurasi AI client secara spesifik atau manual, gunakan konfigurasi berikut:
+If you prefer to configure each AI assistant manually:
 
-> **Catatan**: Ganti `<PATH_FOLDER_REPOSITORI>` dengan lokasi absolut folder proyek ini di laptop Anda (misal `D:\\Code\\figcraft-mcp` atau `/home/user/figcraft-mcp`). Gunakan double backslash `\\` jika di Windows.
+> Replace `<REPO_PATH>` with the absolute path to this folder (e.g. `D:\\Code\\figcraft-mcp` on Windows or `/home/user/figcraft-mcp` on macOS/Linux).
 
-### A. Google AntiGravity (CLI & IDE)
-Buka atau buat file:
-- **Windows**: `%USERPROFILE%\.gemini\config\mcp_config.json`
-- **macOS / Linux**: `~/.gemini/config/mcp_config.json`
-
-Tambahkan entri `"FigCraft"` di dalam blok `"mcpServers"`:
+#### A. Google AntiGravity (CLI & IDE)
+Config file: `~/.gemini/config/mcp_config.json`
 ```json
 {
   "mcpServers": {
     "FigCraft": {
       "command": "python",
-      "args": [
-        "<PATH_FOLDER_REPOSITORI>\\bridge.py"
-      ]
+      "args": ["<REPO_PATH>\\bridge.py"]
     }
   }
 }
 ```
 
-### B. OpenCode CLI
-Jalankan perintah langsung di terminal:
+#### B. OpenCode CLI
+Run command:
 ```bash
-opencode mcp add --global FigCraft -- python <PATH_FOLDER_REPOSITORI>/bridge.py
+opencode mcp add --global FigCraft -- python <REPO_PATH>/bridge.py
 ```
-
-Atau edit file `~/.config/opencode/opencode.json`:
+Or edit `~/.config/opencode/opencode.json`:
 ```json
 {
   "mcp": {
     "FigCraft": {
       "type": "local",
-      "command": [
-        "python",
-        "<PATH_FOLDER_REPOSITORI>\\bridge.py"
-      ],
+      "command": ["python", "<REPO_PATH>\\bridge.py"],
       "enabled": true
     }
   }
 }
 ```
 
-### C. Cursor IDE
-Buka atau buat file:
-- **Windows**: `%USERPROFILE%\.cursor\mcp.json`
-- **macOS / Linux**: `~/.cursor/mcp.json`
-
-Tambahkan entri `"FigCraft"`:
+#### C. Cursor IDE
+Config file: `~/.cursor/mcp.json`
 ```json
 {
   "mcpServers": {
     "FigCraft": {
       "command": "python",
-      "args": [
-        "<PATH_FOLDER_REPOSITORI>\\bridge.py"
-      ]
+      "args": ["<REPO_PATH>\\bridge.py"]
     }
   }
 }
 ```
-*(Atau melalui UI Cursor: Masuk ke **Settings** > **Cursor Settings** > **Features** > **MCP** > klik **Add New MCP Server**).*
 
-### D. Claude Desktop
-Buka file konfigurasi Claude Desktop:
-- **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
-- **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
-
-Tambahkan entri:
+#### D. Claude Desktop
+- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
 ```json
 {
   "mcpServers": {
     "FigCraft": {
       "command": "python",
-      "args": [
-        "<PATH_FOLDER_REPOSITORI>\\bridge.py"
-      ]
+      "args": ["<REPO_PATH>\\bridge.py"]
     }
   }
 }
@@ -173,86 +148,92 @@ Tambahkan entri:
 
 ---
 
-## 5. Konfigurasi Shortcut FigCraft Desktop (Windows)
+### 5. Windows Desktop Shortcut
 
-Agar setiap kali Anda membuka FigCraft secara manual dari menu Windows, FigCraft sudah siap mendengarkan perintah AI:
+To ensure FigCraft is always ready when opened manually:
+1. Right-click the **FigCraft** shortcut > **Properties**.
+2. In the **Target** field, append: `--control 1984`
+   - Example: `"C:\Program Files\ArtCraft\FigCraft\figcraft.exe" --control 1984`
+3. Click **Apply** > **OK**.
 
-1. Buka folder shortcut: Tekan `Win + R`, ketik `shell:programs`, tekan Enter.
-2. Cari shortcut **FigCraft**, klik kanan lalu pilih **Properties**.
-3. Pada tab **Shortcut**, lihat kolom **Target**.
-4. Tambahkan argumen `--control 1984` di ujung teks target:
-   - Sebelum: `"C:\Program Files\ArtCraft\FigCraft\figcraft.exe"`
-   - Sesudah: `"C:\Program Files\ArtCraft\FigCraft\figcraft.exe" --control 1984`
-5. Klik **Apply** lalu **OK**.
-
-*(Catatan: Script `install.py` sudah melakukan hal ini secara otomatis).*
+*(Note: `install.bat` does this automatically).*
 
 ---
 
-## 6. Pengujian & Verifikasi Koneksi
+### 6. Testing & Verification
 
-Setelah instalasi selesai, uji jembatan dengan menjalankan:
+Run the test suite:
 ```bash
+# Verify handshake and canvas drawing
 python test_connection.py
+
+# Verify Design-to-Code pipeline
+python test_design_to_code.py
 ```
 
-**Indikator Keberhasilan:**
-```
-Testing FigCraft MCP Connection...
-[1/3] Sending MCP Handshake...
-  ✔ Connected to: FigCraft v0.18.1
-[2/3] Querying MCP Tools...
-  ✔ Total 19 tools available: list_commands, run_command, batch, create_node, set_properties...
-[3/3] Drawing Test Element in FigCraft...
-  ✔ Successfully created Test Badge on FigCraft canvas!
-
-=== All Tests Passed! FigCraft MCP is 100% Ready! ===
-```
-
-Periksa jendela FigCraft Anda. Anda akan melihat sebuah badge hijau bertuliskan **"✦ FigCraft MCP Connected! ✦"** di kanvas!
+Look at your FigCraft window: you should see the test element drawn live on your canvas!
 
 ---
 
-## 7. Penyelesaian Masalah (Troubleshooting)
+### 7. Troubleshooting & FAQ
 
-### Q: Muncul pesan `python is not recognized` di terminal Windows
-- **Penyebab**: Python belum dimasukkan ke environment variable `PATH`.
-- **Solusi**: Buka Windows Search > ketik *"Edit the system environment variables"* > Environment Variables > pilih `Path` > Tambahkan path folder Python Anda (misal `C:\Python312\` dan `C:\Python312\Scripts\`).
-
-### Q: Muncul pesan `figcraft-cli executable not found`
-- **Penyebab**: FigCraft terpasang di lokasi non-standar.
-- **Solusi**: Tentukan lokasinya secara eksplisit menggunakan environment variable:
-  ```bash
-  # Di Windows PowerShell:
-  $env:FIGCRAFT_CLI_PATH = "D:\CustomPath\FigCraft\figcraft-cli.exe"
-  $env:FIGCRAFT_PATH = "D:\CustomPath\FigCraft\figcraft.exe"
+- **Error: `python is not recognized`**: Python is not in your system PATH. Re-run Python installer and check "Add python.exe to PATH".
+- **Error: `figcraft-cli not found`**: FigCraft is in a custom path. Set environment variable:
+  ```powershell
+  $env:FIGCRAFT_CLI_PATH = "D:\Path\To\figcraft-cli.exe"
+  $env:FIGCRAFT_PATH = "D:\Path\To\figcraft.exe"
   ```
-
-### Q: Port 1984 bentrok dengan aplikasi lain
-- **Solusi**: Anda dapat mengubah port dengan menyetel environment variable `FIGCRAFT_PORT`:
-  ```bash
-  # Mengubah ke port 2000
+- **Port Conflict**: Change the default port by setting `FIGCRAFT_PORT`:
+  ```powershell
   $env:FIGCRAFT_PORT = "2000"
   ```
-  Dan pastikan menjalankan FigCraft dengan `figcraft --control 2000`.
 
 ---
 
-## 8. Referensi Tool MCP FigCraft
+### 8. MCP Tools Reference
 
-Ketika terhubung, AI Anda memiliki akses ke **19 tools native FigCraft**:
+When connected, AI agents have access to **19 native FigCraft tools**:
 
-| Tool | Fungsi |
+| Tool | Description |
 | :--- | :--- |
-| `create_node` | Membuat elemen baru (frame, text, rectangle, vector, component, dsb.) |
-| `set_properties` | Mengubah properti (warna/fill, cornerRadius, layout, padding, font, dsb.) |
-| `batch` | Menjalankan beberapa perintah canvas sekaligus dalam satu langkah undo |
-| `inspect_document` | Membaca struktur node dan hierarki layer pada canvas |
-| `get_node` | Mengambil data detail suatu node spesifik berdasarkan ID |
-| `screenshot` | Mengambil gambar hasil render visual canvas atau layer tertentu (PNG) |
-| `export` | Mengekspor desain ke berbagai format (PNG, SVG, JPG, PDF) |
-| `run_command` | Menjalankan command internal dari 400+ command registry FigCraft |
-| `undo` / `redo` | Membatalkan atau mengulangi perubahan desain |
-| `open_file` / `save_file` | Membuka atau menyimpan dokumen `.figcraft` |
-| `select` | Mengubah elemen yang sedang dipilih di canvas |
-| `pointer` / `key` / `type_text` | Mengirim interaksi input untuk prototipe atau pengujian UI |
+| `create_node` | Creates frames, text, shapes, vectors, or components |
+| `set_properties` | Modifies properties (fills, corner radius, layout, padding, font) |
+| `batch` | Runs multiple canvas commands in 1 single undo step |
+| `inspect_document` | Returns the entire document layer tree as JSON |
+| `get_node` | Fetches details of a specific node ID |
+| `screenshot` | Captures visual PNG crop of the page or specific layers |
+| `export` | Exports frames to PNG, SVG, JPG, PDF |
+| `run_command` | Executes any command from FigCraft's 400+ command registry |
+| `undo` / `redo` | Steps forward or backward through document history |
+| `open_file` / `save_file` | Opens or saves `.figcraft` document files |
+| `select` | Updates the active canvas selection |
+| `pointer` / `key` / `type_text` | Simulates canvas gestures, keystrokes, and text typing |
+
+---
+
+<a name="bahasa-indonesia"></a>
+## Bahasa Indonesia
+
+Panduan langkah demi langkah untuk memasang dan menghubungkan **FigCraft Universal MCP Bridge** ke berbagai AI Coding Assistant di komputer Anda.
+
+### 1. Prasyarat Sistem
+- **Python 3.8+**: Unduh dari [python.org](https://www.python.org/downloads/) dan pastikan centang opsi **"Add python.exe to PATH"**.
+- **Aplikasi FigCraft**: Terpasang di lokasi standar (`C:\Program Files\ArtCraft\FigCraft\`).
+
+### 2. Cara Pemasangan Otomatis (1-Klik)
+- **Windows**: Klik ganda file **`install.bat`**.
+- **macOS / Linux**: Jalankan `./install.sh`.
+
+### 3. Pengujian Koneksi
+Jalankan verifikasi:
+```bash
+python test_connection.py
+python test_design_to_code.py
+```
+Periksa kanvas FigCraft Anda untuk memastikan badge uji coba berhasil dibuat.
+
+### 4. Menghapus Instalasi (Uninstaller)
+Cukup klik ganda **`uninstall.bat`** atau jalankan:
+```bash
+python install.py --uninstall
+```
