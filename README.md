@@ -41,7 +41,6 @@ figcraft-mcp/
 ├── uninstall.bat            # 1-click uninstaller
 ├── test_connection.py       # Handshake & canvas element creation test
 ├── test_design_to_code.py   # Automated Design-to-Code verification
-├── examples/                # Generated code output (e.g., WeatherWidget.tsx)
 ├── skills/                  # AI instruction skills
 │   ├── figcraft-designer/       # Rules for building clean UI on FigCraft canvas
 │   └── figcraft-design-to-code/ # Rules for converting visual designs to React/Flutter
