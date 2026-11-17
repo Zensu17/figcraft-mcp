@@ -1,24 +1,24 @@
 #!/usr/bin/env python3
 """
-FigCraft Universal MCP Smart Bridge
-------------------------------------
-Connects any AI client (AntiGravity CLI, AntiGravity IDE, OpenCode CLI, Cursor, Claude Desktop, etc.)
-to an active FigCraft instance via Model Context Protocol (MCP).
+FigCraft Universal MCP Smart Bridge (Lazy / On-Demand Launch)
+-------------------------------------------------------------
+Connects AI clients (AntiGravity, OpenCode, Cursor, Claude Desktop, etc.)
+to FigCraft via Model Context Protocol (MCP).
 
-Features:
-- 100% dynamic paths: zero hardcoded user directories.
-- Auto-detects FigCraft application & CLI across Windows, macOS, and Linux.
-- Auto-launches the desktop app with `--control <port>` if not currently running.
-- Seamlessly pipes stdio MCP protocol to `figcraft-cli mcp --attach <port>`.
-- Gracefully falls back to headless MCP mode if GUI app cannot be reached.
+Key Behavior:
+- Startup / Discovery: Runs headless figcraft-cli (NO GUI window opens on CLI boot).
+- On-Demand Launch: FigCraft GUI opens ONLY when a tool (tools/call) is actually invoked.
+- 100% dynamic & portable: zero hardcoded user paths.
 """
 
+import json
 import os
 import platform
 import shutil
 import socket
 import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -27,10 +27,7 @@ HOST = "127.0.0.1"
 
 
 def find_figcraft_binaries():
-    """
-    Dynamically locate figcraft and figcraft-cli executables
-    based on the current operating system and standard install locations.
-    """
+    """Dynamically locate figcraft and figcraft-cli executables."""
     system = platform.system()
 
     # 1. Environment variable override
@@ -49,7 +46,6 @@ def find_figcraft_binaries():
             Path.home() / "AppData" / "Local" / "Programs" / "FigCraft",
             Path.home() / "AppData" / "Local" / "ArtCraft" / "FigCraft",
         ]
-
         for d in candidates_dir:
             cand_gui = d / "figcraft.exe"
             cand_cli = d / "figcraft-cli.exe"
@@ -73,7 +69,7 @@ def find_figcraft_binaries():
                 gui_path, cli_path = cg, cc
                 break
 
-    else:  # Linux / Unix
+    else:  # Linux
         cand_dirs = [
             Path("/usr/local/bin"),
             Path("/usr/bin"),
@@ -87,7 +83,6 @@ def find_figcraft_binaries():
                 gui_path, cli_path = cg, cc
                 break
 
-    # Fallback to PATH search
     if not gui_path:
         w_gui = shutil.which("figcraft")
         if w_gui:
@@ -104,28 +99,26 @@ def find_figcraft_binaries():
 def is_port_open(host: str, port: int) -> bool:
     """Check if the control TCP port is accepting connections."""
     try:
-        with socket.create_connection((host, port), timeout=0.4):
+        with socket.create_connection((host, port), timeout=0.3):
             return True
     except (socket.timeout, ConnectionRefusedError, OSError):
         return False
 
 
 def ensure_figcraft_running(gui_path: Path, port: int) -> bool:
-    """Ensure FigCraft GUI app is running with --control <port>."""
+    """Launch FigCraft desktop GUI with --control <port> on demand."""
     if is_port_open(HOST, port):
         return True
 
     if not gui_path or not gui_path.exists():
-        sys.stderr.write(f"[FigCraft Bridge] Notice: GUI binary not found. Will use headless engine.\n")
+        sys.stderr.write("[FigCraft Bridge] Notice: GUI binary not found. Using headless engine.\n")
         sys.stderr.flush()
         return False
 
-    # Launch GUI in detached mode depending on OS
     system = platform.system()
     try:
         if system == "Windows":
-            # DETACHED_PROCESS = 0x00000008, CREATE_NEW_PROCESS_GROUP = 0x00000200
-            creation_flags = 0x00000008 | 0x00000200
+            creation_flags = 0x00000008 | 0x00000200  # DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP
             subprocess.Popen(
                 [str(gui_path), "--control", str(port)],
                 cwd=str(gui_path.parent),
@@ -143,7 +136,7 @@ def ensure_figcraft_running(gui_path: Path, port: int) -> bool:
         sys.stderr.write(f"[FigCraft Bridge] Notice: Could not launch GUI automatically: {e}\n")
         sys.stderr.flush()
 
-    # Wait for the control port to be listening (up to 10 seconds)
+    # Wait for the control port to open (up to 10 seconds)
     start_time = time.time()
     while time.time() - start_time < 10.0:
         if is_port_open(HOST, port):
@@ -153,37 +146,146 @@ def ensure_figcraft_running(gui_path: Path, port: int) -> bool:
     return is_port_open(HOST, port)
 
 
+class LazyMcpBridge:
+    def __init__(self, gui_path: Path, cli_path: Path, port: int):
+        self.gui_path = gui_path
+        self.cli_path = cli_path
+        self.port = port
+        self.proc = None
+        self.is_attached = False
+        self.stop_reader = False
+        self.reader_thread = None
+        self.last_init_params = None
+        self.lock = threading.Lock()
+
+    def start_headless(self):
+        """Start headless instance for lightweight startup/discovery."""
+        self.proc = subprocess.Popen(
+            [str(self.cli_path), "mcp"],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            text=True,
+        )
+        self.is_attached = False
+        self._start_reader_thread()
+
+    def _start_reader_thread(self):
+        def reader():
+            while not self.stop_reader and self.proc and self.proc.stdout:
+                try:
+                    line = self.proc.stdout.readline()
+                    if not line:
+                        break
+                    sys.stdout.write(line)
+                    sys.stdout.flush()
+                except Exception:
+                    break
+
+        self.reader_thread = threading.Thread(target=reader, daemon=True)
+        self.reader_thread.start()
+
+    def transition_to_attached(self):
+        """Switch from headless to attached GUI mode on the first tool call."""
+        with self.lock:
+            if self.is_attached:
+                return
+
+            self.stop_reader = True
+            if self.proc:
+                try:
+                    self.proc.terminate()
+                    self.proc.wait(timeout=2)
+                except Exception:
+                    pass
+
+            # Launch FigCraft GUI on demand
+            gui_ready = ensure_figcraft_running(self.gui_path, self.port)
+
+            if gui_ready:
+                cmd = [str(self.cli_path), "mcp", "--attach", str(self.port)]
+                self.is_attached = True
+            else:
+                cmd = [str(self.cli_path), "mcp"]
+                self.is_attached = False
+
+            self.proc = subprocess.Popen(
+                cmd,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                text=True,
+            )
+            self.stop_reader = False
+
+            # Internal handshake with attached engine
+            init_params = self.last_init_params or {
+                "protocolVersion": "2024-11-05",
+                "capabilities": {},
+                "clientInfo": {"name": "figcraft-bridge", "version": "1.0"},
+            }
+            handshake = json.dumps({
+                "jsonrpc": "2.0",
+                "id": "bridge-init-handshake",
+                "method": "initialize",
+                "params": init_params,
+            }) + "\n"
+            self.proc.stdin.write(handshake)
+            self.proc.stdin.flush()
+            # Consume the internal init response so it doesn't leak to client
+            self.proc.stdout.readline()
+
+            notify = json.dumps({"jsonrpc": "2.0", "method": "notifications/initialized"}) + "\n"
+            self.proc.stdin.write(notify)
+            self.proc.stdin.flush()
+
+            self._start_reader_thread()
+
+    def run(self):
+        self.start_headless()
+
+        for line in sys.stdin:
+            if not line:
+                break
+
+            # Parse method to detect tool calls
+            try:
+                msg = json.loads(line)
+                method = msg.get("method", "")
+                if method == "initialize":
+                    self.last_init_params = msg.get("params")
+                elif method == "tools/call" and not self.is_attached:
+                    self.transition_to_attached()
+            except Exception:
+                pass
+
+            if self.proc and self.proc.stdin:
+                try:
+                    self.proc.stdin.write(line if line.endswith("\n") else line + "\n")
+                    self.proc.stdin.flush()
+                except Exception:
+                    break
+
+        # Cleanup on exit
+        self.stop_reader = True
+        if self.proc:
+            try:
+                self.proc.terminate()
+            except Exception:
+                pass
+
+
 def main():
     gui_path, cli_path = find_figcraft_binaries()
 
     if not cli_path or not cli_path.exists():
-        sys.stderr.write(
-            "[FigCraft Bridge] Error: figcraft-cli executable not found.\n"
-            "Please ensure FigCraft is installed or set FIGCRAFT_CLI_PATH environment variable.\n"
-        )
+        sys.stderr.write("[FigCraft Bridge] Error: figcraft-cli executable not found.\n")
         sys.stderr.flush()
         sys.exit(1)
 
-    app_ready = ensure_figcraft_running(gui_path, DEFAULT_PORT)
-
-    if app_ready:
-        cmd = [str(cli_path), "mcp", "--attach", str(DEFAULT_PORT)]
-    else:
-        sys.stderr.write("[FigCraft Bridge] Running in headless mode (app port not active)\n")
-        sys.stderr.flush()
-        cmd = [str(cli_path), "mcp"]
-
+    bridge = LazyMcpBridge(gui_path, cli_path, DEFAULT_PORT)
     try:
-        proc = subprocess.Popen(cmd)
-        return_code = proc.wait()
-        sys.exit(return_code)
+        bridge.run()
     except KeyboardInterrupt:
-        proc.terminate()
         sys.exit(0)
-    except Exception as e:
-        sys.stderr.write(f"[FigCraft Bridge] Error running figcraft-cli: {e}\n")
-        sys.stderr.flush()
-        sys.exit(1)
 
 
 if __name__ == "__main__":
