@@ -49,6 +49,10 @@ figcraft-mcp/
 |-- docs/                    # Dokumentasi arsitektur dan spesifikasi teknis
 |-- INSTALLATION.md          # Panduan instalasi lengkap (Bahasa Inggris)
 |-- INSTALLATION.id.md       # Panduan instalasi lengkap (Bahasa Indonesia)
+|-- tokens.py                # Modul API token desain dan generator komponen kanvas
+|-- tokens.json              # Kamus token desain standar (warna, spasi, radius)
+|-- TOKENS.md                # Panduan referensi token desain (Bahasa Inggris)
+|-- TOKENS.id.md             # Panduan referensi token desain (Bahasa Indonesia)
 |-- PROMPTS.md               # Kumpulan formula prompt siap pakai (Bahasa Inggris)
 |-- PROMPTS.id.md            # Kumpulan formula prompt siap pakai (Bahasa Indonesia)
 |-- README.md                # Dokumentasi utama (Bahasa Inggris)

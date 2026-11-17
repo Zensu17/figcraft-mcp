@@ -49,6 +49,10 @@ figcraft-mcp/
 |-- docs/                    # Architecture documentation and technical specifications
 |-- INSTALLATION.md          # Comprehensive installation guide (English)
 |-- INSTALLATION.id.md       # Comprehensive installation guide (Bahasa Indonesia)
+|-- tokens.py                # Design tokens API and interactive canvas starter generator
+|-- tokens.json              # Standard design tokens dictionary (colors, spacing, radius)
+|-- TOKENS.md                # Design tokens reference guide (English)
+|-- TOKENS.id.md             # Design tokens reference guide (Bahasa Indonesia)
 |-- PROMPTS.md               # Ready-to-use prompt formula cheat sheet (English)
 |-- PROMPTS.id.md            # Ready-to-use prompt formula cheat sheet (Bahasa Indonesia)
 |-- README.md                # Primary project overview (English)
