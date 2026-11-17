@@ -1,17 +1,20 @@
 # FigCraft Universal MCP Bridge
 
-Jembatan Model Context Protocol (MCP) untuk menghubungkan AI Coding Agent dengan aplikasi desain interface FigCraft.
+Jembatan Model Context Protocol (MCP) dua arah (*Two-Way Design & Code*) untuk menghubungkan AI Coding Agent dengan aplikasi desain interface FigCraft.
 
-Dengan repositori ini, berbagai AI assistant di komputer Anda (Google AntiGravity CLI/IDE, OpenCode CLI, Cursor, Claude Desktop) dapat langsung merancang dan memodifikasi komponen visual di kanvas desktop FigCraft secara real-time.
+Dengan repositori ini, berbagai AI assistant di komputer Anda (Google AntiGravity CLI/IDE, OpenCode CLI, Cursor, Claude Desktop) dapat:
+1. **Text-to-UI**: Merancang dan memodifikasi komponen visual di kanvas desktop FigCraft secara real-time.
+2. **Design-to-Code**: Membaca elemen desain visual di FigCraft dan mengonversinya secara presisi menjadi kode frontend (React + Tailwind CSS, Flutter, atau HTML/CSS).
 
 ---
 
 ## Fitur Utama
 
-- **100% Portabel & Dinamis**: Tidak ada path user yang di-hardcode. Setiap laptop atau komputer akan otomatis menggunakan direktori dan Python miliknya masing-masing.
-- **Deteksi Otomatis (Windows, macOS, Linux)**: Mencari lokasi instalasi FigCraft GUI dan CLI secara mandiri.
-- **Auto-Launch GUI**: Jika aplikasi FigCraft belum dibuka saat Anda memberi prompt ke AI, bridge akan otomatis membukanya dengan loopback control port (`--control 1984`).
-- **Pewarisan Protokol stdio**: Mengalirkan instruksi JSON-RPC langsung ke engine `figcraft-cli mcp --attach 1984` dengan fallback ke mode headless jika diperlukan.
+- **Two-Way Design-to-Code**: Dilengkapi helper AST cleaner (`codegen_helper.py`) yang memangkas ribuan baris dump JSON mentah menjadi token semantik ringkas (hemat token AI hingga 50-70%).
+- **Lazy / On-Demand Launch**: Jendela GUI FigCraft **hanya terbuka ketika AI benar-benar memanggil tool desain (`tools/call`)**. Booting AI CLI/IDE tetap hening, cepat, dan bersih.
+- **100% Portabel & Dinamis**: Nol path user yang di-hardcode. Bekerja otomatis menggunakan path Python dan profil user di laptop masing-masing.
+- **Deteksi Otomatis Multi-Platform**: Mendukung Windows, macOS, dan Linux.
+- **Auto-Config 1-Klik**: Mengonfigurasi AntiGravity, OpenCode, Cursor, dan Claude Desktop secara otomatis.
 
 ---
 
@@ -19,14 +22,21 @@ Dengan repositori ini, berbagai AI assistant di komputer Anda (Google AntiGravit
 
 ```
 figcraft-mcp/
-├── bridge.py           # Core smart bridge runner (zero hardcoded paths)
-├── install.py          # Script konfigurasi otomatis untuk semua AI client
-├── install.bat         # Installer 1-klik untuk pengguna Windows
-├── install.sh          # Installer untuk macOS / Linux
-├── test_connection.py  # Script pengujian koneksi & pembuatan elemen kanvas
-├── INSTALLATION.md     # Panduan instalasi mendalam (manual & otomatis)
-├── .gitignore          # Pengabaian file cache & temporer
-└── README.md           # Ringkasan proyek
+├── bridge.py                # Smart MCP bridge runner (lazy launch & dynamic paths)
+├── codegen_helper.py        # Tokenizer & AST cleaner untuk workflow Design-to-Code
+├── install.py               # Auto-installer untuk seluruh AI client
+├── install.bat              # Installer 1-klik untuk pengguna Windows
+├── install.sh               # Installer untuk macOS / Linux
+├── uninstall.bat            # Uninstaller 1-klik jika ingin mencopot konfigurasi
+├── test_connection.py       # Script verifikasi koneksi & tes pembuatan badge kanvas
+├── test_design_to_code.py   # Script verifikasi konversi desain FigCraft ke React
+├── examples/                # Contoh komponen hasil konversi (WeatherWidget.tsx)
+├── skills/                  # Kumpulan skill panduan AI
+│   ├── figcraft-designer/       # Panduan pembuatan desain di kanvas FigCraft
+│   └── figcraft-design-to-code/ # Panduan konversi desain kanvas ke kode frontend
+├── INSTALLATION.md          # Panduan instalasi mendalam (manual & otomatis)
+├── .gitignore               # Pengabaian file cache & temporer
+└── README.md                # Dokumentasi proyek
 ```
 
 ---
@@ -56,17 +66,23 @@ chmod +x install.sh
 
 Jalankan script verifikasi untuk memastikan koneksi berjalan lancar:
 ```bash
+# Uji koneksi MCP & pembuatan elemen di kanvas
 python test_connection.py
+
+# Uji pipeline Design-to-Code (menghasilkan examples/WeatherWidget.tsx)
+python test_design_to_code.py
 ```
-Script akan memeriksa handshake MCP, menghitung 19 tool desain, dan langsung menggambar sebuah badge tes hijau di kanvas FigCraft.
 
 ---
 
 ## Contoh Prompt Penggunaan
 
-Setelah terpasang, Anda bisa langsung mengetikkan instruksi desain di AI client pilihan Anda:
-
+### 1. Membuat Desain di FigCraft (Text-to-UI)
 - *"Buat komponen kartu login modern dengan latar gelap, input email, input password, dan tombol masuk di FigCraft."*
 - *"Rancang navbar aplikasi web responsif lengkap dengan logo dan tautan menu di kanvas FigCraft."*
 - *"Buat dashboard card metrik penjualan bulanan dengan indikator persentase pertumbuhan."*
-- *"Buat card profil minimalis dengan avatar, nama, status ketersediaan, dan tombol kontak."*
+
+### 2. Mengubah Desain FigCraft Menjadi Kode (Design-to-Code)
+- *"Baca card cuaca yang ada di FigCraft, lalu ubah menjadi komponen React Tailwind CSS yang responsif."*
+- *"Konversikan frame terpilih di FigCraft menjadi widget Flutter."*
+- *"Ekstrak token warna dan typography dari kanvas FigCraft ke dalam file tailwind.config.js."*
