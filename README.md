@@ -24,40 +24,31 @@ figcraft-mcp/
 ├── install.bat         # Installer 1-klik untuk pengguna Windows
 ├── install.sh          # Installer untuk macOS / Linux
 ├── test_connection.py  # Script pengujian koneksi & pembuatan elemen kanvas
+├── INSTALLATION.md     # Panduan instalasi mendalam (manual & otomatis)
 ├── .gitignore          # Pengabaian file cache & temporer
-└── README.md           # Petunjuk penggunaan
+└── README.md           # Ringkasan proyek
 ```
 
 ---
 
-## Prasyarat
+## Panduan Pemasangan
 
-1. **Python 3.8+** terpasang di sistem dan terdaftar dalam PATH.
-2. **FigCraft** (aplikasi desktop & CLI) terpasang di komputer.
+Untuk panduan mendalam dan langkah demi langkah (termasuk instalasi manual per AI client, konfigurasi shortcut, dan pemecahan masalah), silakan baca:
+👉 **[INSTALLATION.md](./INSTALLATION.md)**
 
----
+### Ringkasan Cepat (1-Klik):
 
-## Cara Pemasangan (Cepat / 1-Klik)
-
-### Di Windows
-Klik ganda file `install.bat`, atau jalankan via PowerShell:
+#### Di Windows:
+Cukup klik ganda file **`install.bat`**, atau jalankan di terminal:
 ```powershell
 python install.py
 ```
 
-### Di macOS / Linux
-Berikan hak eksekusi dan jalankan:
+#### Di macOS / Linux:
 ```bash
 chmod +x install.sh
 ./install.sh
 ```
-
-Installer akan secara otomatis mendeteksi dan memperbarui konfigurasi AI client yang ada di komputer Anda:
-- **AntiGravity**: `~/.gemini/config/mcp_config.json`
-- **OpenCode**: `~/.config/opencode/opencode.json`
-- **Cursor**: `~/.cursor/mcp.json`
-- **Claude Desktop**: File konfigurasi desktop jika terpasang.
-- **Windows Shortcut**: Memperbarui shortcut FigCraft agar selalu membuka dengan argumen `--control 1984`.
 
 ---
 
@@ -67,7 +58,7 @@ Jalankan script verifikasi untuk memastikan koneksi berjalan lancar:
 ```bash
 python test_connection.py
 ```
-Script akan memeriksa handshake MCP, menghitung daftar tool desain, dan menggambar sebuah badge tes secara langsung di kanvas FigCraft.
+Script akan memeriksa handshake MCP, menghitung 19 tool desain, dan langsung menggambar sebuah badge tes hijau di kanvas FigCraft.
 
 ---
 
@@ -78,3 +69,4 @@ Setelah terpasang, Anda bisa langsung mengetikkan instruksi desain di AI client 
 - *"Buat komponen kartu login modern dengan latar gelap, input email, input password, dan tombol masuk di FigCraft."*
 - *"Rancang navbar aplikasi web responsif lengkap dengan logo dan tautan menu di kanvas FigCraft."*
 - *"Buat dashboard card metrik penjualan bulanan dengan indikator persentase pertumbuhan."*
+- *"Buat card profil minimalis dengan avatar, nama, status ketersediaan, dan tombol kontak."*
