@@ -127,3 +127,9 @@ Check your FigCraft window: the test element will appear directly on your canvas
 To remove the FigCraft bridge configuration from all AI tools:
 - On Windows: Double-click **`uninstall.bat`**.
 - From terminal: Run `python install.py --uninstall`.
+
+---
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

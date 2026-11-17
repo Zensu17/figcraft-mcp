@@ -127,3 +127,9 @@ Periksa jendela aplikasi FigCraft Anda: elemen uji akan digambar secara langsung
 Untuk mencopot konfigurasi jembatan dari seluruh asisten AI:
 - Pada Windows: Klik ganda **`uninstall.bat`**.
 - Melalui terminal: Jalankan perintah `python install.py --uninstall`.
+
+---
+
+## Lisensi
+
+Proyek ini dilisensikan di bawah Lisensi MIT - lihat berkas [LICENSE](LICENSE) untuk rincian lengkap.
