@@ -1,6 +1,6 @@
 # FigCraft Universal MCP Bridge
 
-> Hubungkan AI Coding Assistant ke FigCraft dengan alur kerja desain dan konversi kode dua arah.
+> Hubungkan AI Coding Assistant ke FigCraft dengan MCP Primitives lengkap, Design-to-Code multi-framework, template terverifikasi WCAG, dan keamanan STRIDE.
 
 [Read in English](README.md) | **Bahasa Indonesia**
 
@@ -8,23 +8,35 @@
 
 ## Gambaran Umum
 
-FigCraft Universal MCP Bridge menghubungkan berbagai asisten kecerdasan buatan (seperti Google AntiGravity, OpenCode, Cursor, dan Claude Desktop) langsung ke aplikasi FigCraft.
+FigCraft Universal MCP Bridge menghubungkan asisten AI modern (Google AntiGravity, OpenCode CLI, Cursor, dan Claude Desktop) langsung ke FigCraft, aplikasi desain antarmuka open-source berbasis Rust.
 
-FigCraft adalah aplikasi desain antarmuka open-source yang dibangun menggunakan bahasa pemrograman Rust sehingga beroperasi secara cepat, ringan, dan mandiri di komputer lokal Anda.
-
-Melalui integrasi Model Context Protocol (MCP), Anda mendapatkan alur kerja dua arah yang lengkap:
-1. **Text-to-UI (Teks ke Desain)**: AI menggambar komponen antarmuka, tombol, formulir, dan layout langsung di kanvas visual FigCraft secara otomatis.
-2. **Design-to-Code (Desain ke Kode)**: AI membaca elemen visual yang ada di kanvas FigCraft dan menerjemahkannya menjadi kode frontend siap pakai (React dengan Tailwind CSS, atau Flutter).
+Lebih dari sekadar proxy pass-through, jembatan ini berperan sebagai **MCP Protocol Middleware** (100% Python standard library, tanpa dependensi eksternal) yang menyediakan:
+1. **Text-to-UI & Template Terkurasi**: Menggambar layout kustom atau merender kit komponen terverifikasi WCAG 2.2 AA langsung ke kanvas FigCraft dalam satu langkah undo.
+2. **Design-to-Code Multi-Framework**: Membaca frame kanvas, mengekstrak semantic UI AST dan typed props (pola Code Connect), lalu menghasilkan kode **React + Tailwind CSS**, **Vue 3 SFC**, **Flutter**, atau **HTML/CSS semantik**.
+3. **MCP Resources, Prompts & Guardrails**: Mengekspos token desain, panduan engine, dan semantic AST langsung via protokol MCP sekaligus menormalisasi ketidakcocokan nama properti dari LLM secara otomatis.
+4. **Hardening Keamanan STRIDE**: Memvalidasi ukuran/kedalaman payload JSON-RPC, membatasi port loopback unprivileged, memblokir path UNC/traversal, serta mensterilkan output codegen dari XSS dan CSS injection.
 
 ---
 
 ## Fitur Utama
 
-- **Peluncuran Berdasarkan Permintaan (Lazy Launch)**: Saat Anda membuka terminal atau IDE, jembatan penghubung berjalan hening tanpa membuka jendela baru (kurang dari 50 milidetik). Antarmuka FigCraft hanya akan terbuka otomatis ketika Anda memberi perintah mendesain kepada AI.
-- **Konversi Desain ke Kode yang Hemat Token**: Dilengkapi pembersih pohon sintaks visual (`codegen_helper.py`) yang mereduksi data koordinat mentah hingga 50-70%, sehingga pemakaian kuota token AI menjadi jauh lebih hemat dan efisien.
-- **Portabel dan Bebas Hardcode**: Tidak bergantung pada nama pengguna atau direktori tertentu. Dapat dijalankan secara dinamis di Windows, macOS, dan Linux.
-- **Pemasang Otomatis 1-Klik**: Secara otomatis mendeteksi Python, lokasi instalasi FigCraft, dan mendaftarkan konfigurasi ke Google AntiGravity, OpenCode, Cursor, dan Claude Desktop sekaligus.
-- **Pencopot Pemasangan Bersih**: Dilengkapi skrip pembersih yang dapat mengembalikan seluruh konfigurasi AI ke kondisi awal tanpa meninggalkan sisa file konfigurasi.
+- **Peluncuran Berdasarkan Permintaan (Lazy Launch)**: Berjalan hening dalam mode headless saat CLI boot (< 50 ms tanpa membuka jendela). GUI FigCraft hanya diluncurkan otomatis ketika tool kanvas live atau resource kanvas live (`figcraft://document`, `figcraft://node/...`, `figcraft://canvas/semantic`) dipanggil.
+- **MCP Primitives Middleware (`mcp_primitives.py`)**:
+  - **Custom Resources**: `figcraft://tokens`, `figcraft://guidelines`, `figcraft://canvas/semantic`, dan template `figcraft://node/{id}/semantic`.
+  - **Custom Prompts**: `figcraft_dashboard_card`, `figcraft_auth_screen`, `figcraft_navbar`, dan `figcraft_design_to_code`.
+  - **Bridge Workflow Tools**: `figcraft_get_tokens`, `figcraft_extract_semantic_ast`, `figcraft_generate_code`, dan `figcraft_render_template`.
+  - **Guardrails Engine Otomatis**: Menormalisasi `strokeWidth` -> `strokeWeight`, `start`/`end`/`space-between` -> `min`/`max`/`spaceBetween`, serta `fontWeight` numerik -> `fontStyle` sebelum dikirim ke FigCraft.
+- **Design-to-Code Multi-Framework (`codegen_helper.py`)**:
+  - Reverse lookup warna, spacing, radius, dan tipografi dari `tokens.json` ke kelas Tailwind.
+  - Ekstraksi typed props (`TEXT`, `BOOLEAN`, `VARIANT`, `SLOT`) untuk **React + Tailwind**, **Vue 3**, **Flutter**, dan **HTML/CSS**.
+- **Sistem Desain WCAG 2.2 AA & 7 Template (`tokens.json`, `tokens.py`)**:
+  - 4 tema terkurasi (`editorial-paper`, `obsidian-studio`, `slate-instrument`, `botanical-ledger`) dengan seluruh 32 pasangan warna lolos audit kontras >= 4.5:1.
+  - 7 template komponen kanvas satu-undo (`palette_swatch`, `buttons`, `badges`, `segmented_control`, `data_table`, `state_cards`, `theme_board`).
+- **Hardening Keamanan (`security.py`)**:
+  - Pembatasan ukuran JSON-RPC (2 MiB), kedalaman objek (48), dan jumlah perintah batch (500).
+  - Pemblokiran path UNC Windows (`\\host\share`), null byte, traversal `..`, serta dukungan allowlist direktori via `FIGCRAFT_ALLOWED_ROOTS`.
+  - Validasi warna hex ketat dan escaping mustache Vue/entitas HTML pada generator kode.
+- **Portabel Penuh**: Bebas hardcoded path, berjalan di Windows, macOS, dan Linux (Python 3.10+).
 
 ---
 
@@ -32,29 +44,36 @@ Melalui integrasi Model Context Protocol (MCP), Anda mendapatkan alur kerja dua 
 
 ```
 figcraft-mcp/
-|-- bridge.py                # Jembatan cerdas MCP (lazy launch dan resolusi jalur otomatis)
-|-- codegen_helper.py        # Pembersih AST dan tokenizer untuk konversi Desain-ke-Kode
-|-- check.py                 # Alat diagnosis mandiri status sistem dan konfigurasi AI
+|-- bridge.py                # Smart MCP bridge (lazy launch, JSON-RPC multiplexing, batas keamanan)
+|-- mcp_primitives.py        # Custom MCP Resources, Prompts, Workflow Tools & input guardrails
+|-- security.py              # Validasi keamanan STRIDE, proteksi path, hex & log sanitizer
+|-- codegen_helper.py        # Pembersih semantic AST, ekstraktor props & generator 4 framework
+|-- tokens.py                # API token desain, auditor kontras WCAG AA, exporter CSS/Tailwind & 7 template
+|-- tokens.json              # Kamus token desain, 4 tema terkurasi & token status dark/light
+|-- check.py                 # Alat diagnosis mandiri sistem dan konfigurasi AI
 |-- check.bat                # Runner 1-klik diagnosis kesehatan untuk Windows
 |-- check.sh                 # Runner 1-klik diagnosis kesehatan untuk macOS dan Linux
-|-- install.py               # Logika pemasang otomatis lintas platform
+|-- install.py               # Pemasang otomatis lintas platform
 |-- install.bat              # Pemasang 1-klik untuk Windows
 |-- install.sh               # Pemasang 1-klik untuk macOS dan Linux
 |-- uninstall.bat            # Pencopot pemasangan 1-klik
-|-- test_connection.py       # Pengujian koneksi jembatan dan pembuatan elemen kanvas
-|-- test_design_to_code.py   # Pengujian otomatis alur kerja konversi Desain-ke-Kode
-|-- skills/                  # Kumpulan aturan instruksi untuk asisten AI
-|   |-- figcraft-designer/       # Aturan menggambar UI rapi di kanvas FigCraft
-|   |-- figcraft-design-to-code/ # Aturan membaca desain visual menjadi kode React/Flutter
+|-- tests/                   # Suite unit test headless (tanpa perlu GUI)
+|   |-- test_security_and_bridge.py  # Uji keamanan, XSS codegen, loopback socket & middleware bridge
+|   `-- test_core_unit.py            # Unit test mcp_primitives, tokens & codegen_helper
+|-- test_mcp_primitives.py   # Pengujian E2E stdio JSON-RPC terhadap bridge.py
+|-- test_design_system.py    # Audit kontras WCAG & validasi skema batch 28 kombinasi template x tema
+|-- test_design_to_code.py   # Pengujian pipeline Design-to-Code multi-framework
+|-- test_connection.py       # Pengujian koneksi kanvas FigCraft live
+|-- skills/                  # Instruksi skill untuk asisten AI
+|   |-- figcraft-designer/       # Aturan engine, kontras WCAG & standar anti-slop UI
+|   `-- figcraft-design-to-code/ # Alur Design-to-Code & pemetaan multi-framework
 |-- docs/                    # Dokumentasi arsitektur dan spesifikasi teknis
 |-- INSTALLATION.md          # Panduan instalasi lengkap (Bahasa Inggris)
 |-- INSTALLATION.id.md       # Panduan instalasi lengkap (Bahasa Indonesia)
-|-- tokens.py                # Modul API token desain dan generator komponen kanvas
-|-- tokens.json              # Kamus token desain standar (warna, spasi, radius)
-|-- TOKENS.md                # Panduan referensi token desain (Bahasa Inggris)
-|-- TOKENS.id.md             # Panduan referensi token desain (Bahasa Indonesia)
-|-- PROMPTS.md               # Kumpulan formula prompt siap pakai (Bahasa Inggris)
-|-- PROMPTS.id.md            # Kumpulan formula prompt siap pakai (Bahasa Indonesia)
+|-- TOKENS.md                # Referensi token, tema & template (Bahasa Inggris)
+|-- TOKENS.id.md             # Referensi token, tema & template (Bahasa Indonesia)
+|-- PROMPTS.md               # Formula prompt siap pakai (Bahasa Inggris)
+|-- PROMPTS.id.md            # Formula prompt siap pakai (Bahasa Indonesia)
 |-- README.md                # Dokumentasi utama (Bahasa Inggris)
 `-- README.id.md             # Dokumentasi utama (Bahasa Indonesia)
 ```
@@ -64,69 +83,78 @@ figcraft-mcp/
 ## Panduan Pemasangan Cepat
 
 ### Pengguna Windows
-Klik ganda pada file **`install.bat`**, atau jalankan perintah berikut melalui PowerShell:
+Klik ganda **`install.bat`**, atau jalankan di PowerShell:
 ```powershell
 python install.py
 ```
 
 ### Pengguna macOS dan Linux
-Berikan izin eksekusi pada skrip lalu jalankan:
 ```bash
 chmod +x install.sh
 ./install.sh
 ```
 
-Untuk panduan pemasangan manual atau konfigurasi lanjutan, silakan baca [PANDUAN LENGKAP INSTALASI (INSTALLATION.id.md)](./INSTALLATION.id.md).
+Untuk pemasangan manual dan troubleshooting, baca **[INSTALLATION.id.md](./INSTALLATION.id.md)**.
+
+---
+
+## Variabel Environment Konfigurasi
+
+| Variabel | Default | Fungsi |
+| :--- | :--- | :--- |
+| `FIGCRAFT_PORT` | `1984` | Port kontrol TCP loopback (divalidasi dalam rentang `1024..65535`). |
+| `FIGCRAFT_PATH` | Deteksi otomatis | Override path binary GUI `figcraft`. |
+| `FIGCRAFT_CLI_PATH` | Deteksi otomatis | Override path binary `figcraft-cli`. |
+| `FIGCRAFT_ALLOWED_ROOTS` | Kosong (semua path lokal) | Daftar direktori yang diizinkan (dipisah path separator OS) untuk `open_file`/`save_file`/`export`. |
+| `FIGCRAFT_DEBUG` | Kosong | Set ke `1` untuk mengaktifkan log debug ter-sanitasi ke `figcraft_bridge.log`. |
 
 ---
 
 ## Cara Penggunaan
 
-Untuk kumpulan formula prompt siap pakai pada 6 kategori antarmuka, lihat panduan **[PROMPTS.id.md](./PROMPTS.id.md)**.
+Lihat **[PROMPTS.id.md](./PROMPTS.id.md)** untuk formula prompt siap pakai, dan **[TOKENS.id.md](./TOKENS.id.md)** untuk daftar tema, token, serta template komponen.
 
-Setelah terpasang, buka asisten AI yang Anda gunakan (AntiGravity, Cursor, OpenCode, atau Claude Desktop).
+### 1. Render Template Terkurasi atau Desain Kustom (Text-to-UI)
+- "Render template `state_cards` dengan tema `editorial-paper` di kanvas FigCraft."
+- "Gunakan prompt `figcraft_dashboard_card` untuk membuat kartu metrik MRR `$148,520` dengan tren `+18.4%`."
+- "Buat top navbar desktop di FigCraft dengan transparent flex wrappers (`fill: none`)."
 
-### 1. Membuat Desain Baru di Kanvas (Text-to-UI)
-Ketikkan instruksi dalam bahasa sehari-hari. Contoh perintah:
-- "Buat formulir login modern dengan tema gelap di FigCraft, lengkap dengan input email, password, dan tombol masuk berwarna biru indigo."
-- "Rancang kartu pemutar musik responsif di FigCraft dengan album art, indikator durasi lagu, dan tombol kendali putar musik."
-- "Buat kartu dashboard analitik pendapatan bulanan di FigCraft dengan persentase pertumbuhan hijau."
-
-Hasilnya: Aplikasi FigCraft akan terbuka secara otomatis dan elemen-elemen tersebut langsung digambar di atas kanvas.
-
-### 2. Mengubah Desain Kanvas Menjadi Kode (Design-to-Code)
-Pilih elemen di kanvas FigCraft, lalu minta AI untuk membacanya:
-- "Baca elemen kartu cuaca yang sedang aktif di FigCraft, lalu ubah menjadi komponen React Tailwind CSS yang responsif."
-- "Konversikan kartu profil yang ada di kanvas FigCraft menjadi widget Flutter."
-- "Ekstrak palet warna dan tipografi dari desain FigCraft ke dalam format file tailwind.config.js."
+### 2. Konversi Desain Kanvas ke Kode Produksi (Design-to-Code)
+- "Jalankan `figcraft_generate_code` pada node 125 dengan framework `react-tailwind` dan typed props."
+- "Konversikan node 125 ke `vue`, `flutter`, atau `html-css`."
+- Alternatif CLI:
+  ```bash
+  python codegen_helper.py --node 125 --framework react-tailwind --out Card.tsx
+  ```
 
 ---
 
 ## Pengujian dan Verifikasi
 
-Pastikan kesehatan sistem, koneksi jembatan, dan alur pembuatan kode berfungsi dengan menjalankan pengujian berikut:
-
 ```bash
-# 1. Menjalankan diagnosis mandiri status Python, lokasi FigCraft, dan konfigurasi AI
-python check.py
-# (Pada Windows, Anda juga cukup klik ganda check.bat)
+# 1. Suite unit test, keamanan & mock socket headless (tanpa perlu GUI FigCraft)
+python -m unittest discover -s tests -v
 
-# 2. Menguji koneksi MCP dan membuat badge penanda di kanvas FigCraft
-python test_connection.py
+# 2. Audit seluruh 32 pasangan warna tema & semantik terhadap WCAG 2.2 AA (>= 4.5:1)
+python tokens.py --audit-contrast
+python test_design_system.py
 
-# 3. Menguji alur pembacaan desain dan pembuatan kode React
+# 3. Verifikasi pipeline Design-to-Code multi-framework
 python test_design_to_code.py
-```
 
-Periksa jendela aplikasi FigCraft Anda: elemen uji akan digambar secara langsung di atas kanvas.
+# 4. Verifikasi E2E MCP stdio middleware (23 tools, 6 resources, 3 templates, 10 prompts)
+python test_mcp_primitives.py
+
+# 5. Menjalankan diagnosis mandiri lingkungan
+python check.py
+```
 
 ---
 
 ## Menghapus Pemasangan (Uninstall)
 
-Untuk mencopot konfigurasi jembatan dari seluruh asisten AI:
-- Pada Windows: Klik ganda **`uninstall.bat`**.
-- Melalui terminal: Jalankan perintah `python install.py --uninstall`.
+- Windows: Klik ganda **`uninstall.bat`**.
+- Terminal: Jalankan `python install.py --uninstall`.
 
 ---
 
