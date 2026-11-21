@@ -2,183 +2,211 @@
 """
 Test Design-to-Code Pipeline
 ----------------------------
-Demonstrates and verifies that FigCraft design tokens can be translated
-into a production-grade React Tailwind CSS component.
+Verifies AST cleaning, token reverse-mapping, Code Connect props extraction,
+and multi-framework code generation (React + Tailwind, Vue 3, Flutter, HTML/CSS).
 """
 
-import json
-import re
+from __future__ import annotations
+
+import sys
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+from codegen_helper import clean_node, extract_component_props, generate_code
+
 EXAMPLES_DIR = SCRIPT_DIR / "examples"
 
 
-def tokens_to_react_tailwind(node: dict) -> str:
-    """Simple converter mapping semantic UI tokens to React + Tailwind JSX."""
-    node_type = node.get("type", "frame")
-
-    if node_type == "text":
-        color = node.get("color", "#FFFFFF")
-        size = node.get("fontSize", 14)
-        text = node.get("text", "")
-        # Map font size to Tailwind
-        if size >= 30:
-            size_cls = "text-3xl font-extrabold"
-        elif size >= 20:
-            size_cls = "text-xl font-bold"
-        elif size >= 16:
-            size_cls = "text-base font-semibold"
-        elif size >= 13:
-            size_cls = "text-sm"
-        else:
-            size_cls = "text-xs"
-
-        return f'<span className="{size_cls} text-[{color}]">{text}</span>'
-
-    # Frame / Container
-    classes = []
-    direction = node.get("direction", "col")
-    classes.append("flex")
-    classes.append("flex-col" if direction == "col" else "flex-row")
-
-    if "p" in node:
-        classes.append(f"p-[{node['p']}px]")
-    if "gap" in node:
-        classes.append(f"gap-[{node['gap']}px]")
-    if "bg" in node:
-        classes.append(f"bg-[{node['bg']}]")
-    if "rounded" in node:
-        classes.append(f"rounded-[{node['rounded']}px]")
-    if "justify" in node:
-        j_map = {"between": "justify-between", "center": "justify-center", "start": "justify-start", "end": "justify-end"}
-        classes.append(j_map.get(node["justify"], ""))
-    if "items" in node:
-        i_map = {"center": "items-center", "start": "items-start", "end": "items-end"}
-        classes.append(i_map.get(node["items"], ""))
-
-    cls_str = " ".join(c for c in classes if c)
-
-    children_jsx = []
-    for child in node.get("children", []):
-        children_jsx.append(tokens_to_react_tailwind(child))
-
-    joined_children = "\n        ".join(children_jsx)
-    name = node.get("name", "Container")
-    return f"""{'{/* ' + name + ' */}'}
-      <div className="{cls_str}">
-        {joined_children}
-      </div>"""
-
-
-def main():
-    print("Testing Design-to-Code Pipeline...")
-
-    # Sample FigCraft Weather Widget Token Tree (Identical to canvas node 57)
-    weather_tokens = {
-        "type": "frame",
-        "name": "Simple Weather Widget",
-        "direction": "col",
-        "w": 280,
-        "h": 190,
-        "p": 20,
-        "gap": 10,
-        "rounded": 20,
-        "bg": "#1E293B",
+def build_sample_weather_raw_node() -> dict:
+    return {
+        "id": 57,
+        "name": "Weather Widget",
+        "type": "FRAME",
+        "width": 280.0,
+        "height": 190.0,
+        "cornerRadius": 16.0,
+        "layout": {
+            "mode": "vertical",
+            "gap": 12.0,
+            "padding": [20.0, 24.0, 20.0, 24.0],
+            "mainAlign": "min",
+            "crossAlign": "min",
+        },
+        "fills": [{"type": "solid", "color": "#1E293B"}],
+        "strokes": [{"type": "solid", "color": "#334155"}],
+        "strokeWeight": 1.0,
+        "componentPropertyDefinitions": {
+            "Theme#1:0": {
+                "type": "VARIANT",
+                "defaultValue": "dark",
+                "variantOptions": ["dark", "light"],
+            },
+            "Compact#2:0": {
+                "type": "BOOLEAN",
+                "defaultValue": False,
+            },
+        },
         "children": [
             {
-                "type": "text",
+                "id": 58,
                 "name": "Location",
-                "text": "Jakarta, Indonesia",
-                "fontSize": 12,
-                "color": "#94A3B8"
+                "type": "TEXT",
+                "characters": "Jakarta, Indonesia",
+                "fontSize": 12.0,
+                "fontStyle": "Medium",
+                "fills": [{"type": "solid", "color": "#94A3B8"}],
             },
             {
-                "type": "frame",
+                "id": 59,
                 "name": "Temperature Row",
-                "direction": "row",
-                "gap": 12,
-                "items": "center",
+                "type": "FRAME",
+                "layout": {"mode": "horizontal", "gap": 12.0, "crossAlign": "center"},
                 "children": [
                     {
-                        "type": "text",
-                        "name": "Temp",
-                        "text": "29°C",
-                        "fontSize": 34,
-                        "color": "#F8FAFC"
+                        "id": 60,
+                        "name": "Temperature",
+                        "type": "TEXT",
+                        "characters": "29°C",
+                        "fontSize": 36.0,
+                        "fontStyle": "Bold",
+                        "fills": [{"type": "solid", "color": "#F8FAFC"}],
                     },
                     {
-                        "type": "text",
+                        "id": 61,
                         "name": "Condition",
-                        "text": "Sebagian Berawan",
-                        "fontSize": 13,
-                        "color": "#38BDF8"
-                    }
-                ]
+                        "type": "TEXT",
+                        "characters": "Partly Cloudy",
+                        "fontSize": 14.0,
+                        "fontStyle": "SemiBold",
+                        "fills": [{"type": "solid", "color": "#38BDF8"}],
+                    },
+                ],
             },
             {
-                "type": "frame",
-                "name": "Metrics Row",
-                "direction": "row",
-                "justify": "between",
-                "items": "center",
+                "id": 62,
+                "name": "Refresh Button",
+                "type": "FRAME",
+                "cornerRadius": 8.0,
+                "layout": {
+                    "mode": "horizontal",
+                    "padding": [8.0, 16.0, 8.0, 16.0],
+                    "mainAlign": "center",
+                    "crossAlign": "center",
+                },
+                "fills": [{"type": "solid", "color": "#4F46E5"}],
                 "children": [
                     {
-                        "type": "text",
-                        "name": "Humidity",
-                        "text": "78% Kelembapan",
-                        "fontSize": 11,
-                        "color": "#94A3B8"
-                    },
-                    {
-                        "type": "text",
-                        "name": "Wind",
-                        "text": "14 km/j",
-                        "fontSize": 11,
-                        "color": "#94A3B8"
-                    },
-                    {
-                        "type": "text",
-                        "name": "UV Index",
-                        "text": "UV Sedang",
-                        "fontSize": 11,
-                        "color": "#94A3B8"
+                        "id": 63,
+                        "name": "Action Label",
+                        "type": "TEXT",
+                        "characters": "Refresh Forecast",
+                        "fontSize": 14.0,
+                        "fontStyle": "SemiBold",
+                        "fills": [{"type": "solid", "color": "#FFFFFF"}],
                     }
-                ]
-            }
-        ]
+                ],
+            },
+            {
+                "id": 64,
+                "name": "Footer Slot",
+                "type": "FRAME",
+                "layout": {"mode": "horizontal"},
+                "children": [],
+            },
+        ],
     }
 
-    body_jsx = tokens_to_react_tailwind(weather_tokens)
 
-    component_code = f"""import React from 'react';
+def main() -> None:
+    print("Testing Multi-Framework Design-to-Code Pipeline...")
 
-export default function WeatherWidget() {{
-  return (
-    <div className="flex items-center justify-center p-6 bg-slate-950 min-h-screen">
-      {body_jsx}
-    </div>
-  );
-}}
-"""
+    raw = build_sample_weather_raw_node()
+    cleaned = clean_node(raw)
+
+    # 1. Verify AST cleaning (asymmetric padding, stroke, role, componentPropertyDefinitions)
+    assert cleaned["py"] == 20 and cleaned["px"] == 24
+    assert cleaned["borderColor"] == "#334155" and cleaned["borderWidth"] == 1
+    assert cleaned["children"][2]["role"] == "button"
+    assert "componentPropertyDefinitions" in cleaned
+    print("  [PASS] Semantic AST extraction (asymmetric padding, border, role, component props)")
+
+    # 2. Verify Code Connect style props extraction
+    props, bindings = extract_component_props(cleaned)
+    prop_map = {p["name"]: p for p in props}
+    assert prop_map["theme"]["kind"] == "variant"
+    assert prop_map["theme"]["options"] == ["dark", "light"]
+    assert prop_map["compact"]["kind"] == "boolean"
+    assert prop_map["location"]["default"] == "Jakarta, Indonesia"
+    assert prop_map["temperature"]["default"] == "29°C"
+    assert prop_map["actionLabel"]["default"] == "Refresh Forecast"
+    assert prop_map["footerSlot"]["kind"] == "slot"
+    assert len(bindings) == 5
+    print(f"  [PASS] Props extraction ({len(props)} typed props: variant, boolean, text, slot)")
+
+    # 3. Verify React + Tailwind generation & token reverse lookup
+    react_res = generate_code(cleaned, framework="react-tailwind")
+    react_code = react_res["code"]
+    assert "export interface WeatherWidgetProps" in react_code
+    assert 'theme?: "dark" | "light";' in react_code
+    assert "compact?: boolean;" in react_code
+    assert "footerSlot?: React.ReactNode;" in react_code
+    assert "bg-slate-800" in react_code
+    assert "border-slate-700" in react_code
+    assert "rounded-2xl" in react_code
+    assert "py-5" in react_code and "px-6" in react_code
+    assert "text-sky-400" in react_code
+    assert "bg-indigo-600" in react_code
+    assert '<button type="button"' in react_code
+    assert "{footerSlot}" in react_code
 
     EXAMPLES_DIR.mkdir(parents=True, exist_ok=True)
     out_file = EXAMPLES_DIR / "WeatherWidget.tsx"
-    with open(out_file, "w", encoding="utf-8") as f:
-        f.write(component_code)
+    out_file.write_text(react_code, encoding="utf-8")
+    print(f"  [PASS] React + Tailwind generator (saved example to {out_file})")
 
-    print(f"  [OK] Generated Component saved to: {out_file}")
+    # 4. Verify Vue 3 SFC generation
+    vue_res = generate_code(cleaned, framework="vue")
+    vue_code = vue_res["code"]
+    assert '<script setup lang="ts">' in vue_code
+    assert "withDefaults(defineProps<Props>()" in vue_code
+    assert "{{ props.location }}" in vue_code
+    assert '<slot name="footerSlot" />' in vue_code
+    assert "bg-slate-800" in vue_code
+    print("  [PASS] Vue 3 SFC generator")
 
-    # Assertions
-    assert "export default function WeatherWidget" in component_code
-    assert "bg-[#1E293B]" in component_code
-    assert "rounded-[20px]" in component_code
-    assert "Jakarta, Indonesia" in component_code
-    assert "29°C" in component_code
-    assert "Sebagian Berawan" in component_code
-    assert "78% Kelembapan" in component_code
+    # 5. Verify Flutter Widget generation
+    flutter_res = generate_code(cleaned, framework="flutter")
+    flutter_code = flutter_res["code"]
+    assert "class WeatherWidget extends StatelessWidget" in flutter_code
+    assert "final String location;" in flutter_code
+    assert "final Widget? footerSlot;" in flutter_code
+    assert "Color(0xFF1E293B)" in flutter_code
+    assert "BorderRadius.circular(16.0)" in flutter_code
+    assert "FontWeight.w700" in flutter_code
+    print("  [PASS] Flutter StatelessWidget generator")
 
-    print("\n\033[1;32m=== Design-to-Code Pipeline Verified Successfully! ===\033[0m\n")
+    # 6. Verify HTML + CSS generation
+    html_res = generate_code(cleaned, framework="html-css")
+    html_code = html_res["code"]
+    assert "<style>" in html_code
+    assert "background-color: #1E293B;" in html_code
+    assert "padding: 20px 24px;" in html_code
+    assert '<button type="button"' in html_code
+    assert "Jakarta, Indonesia" in html_code
+    print("  [PASS] Semantic HTML + CSS generator")
+
+    # 7. Verify boundary validation on unsupported framework
+    try:
+        generate_code(cleaned, framework="svelte")
+        raise AssertionError("Expected ValueError for unsupported framework")
+    except ValueError as exc:
+        assert "Unsupported framework" in str(exc)
+    print("  [PASS] Boundary validation rejects unsupported framework")
+
+    print("\nAll Design-to-Code pipeline tests passed.")
 
 
 if __name__ == "__main__":

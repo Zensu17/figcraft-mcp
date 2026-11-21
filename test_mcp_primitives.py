@@ -122,9 +122,43 @@ def test_custom_prompt_rendering_and_validation() -> None:
     d2c = mcp_primitives.handle_custom_prompt_get(
         "figcraft_design_to_code", {"node_id": "125", "framework": "flutter"}
     )
-    assert "figcraft://node/125/semantic" in d2c["messages"][0]["content"]["text"]
+    assert "figcraft_generate_code" in d2c["messages"][0]["content"]["text"]
     assert "flutter" in d2c["messages"][0]["content"]["text"]
-    print("  [PASS] Custom prompt rendering & argument validation")
+
+    # Mocked figcraft_generate_code tool verification (code & json & validation)
+    def mock_upstream(method: str, params: dict[str, Any]) -> dict[str, Any]:
+        assert method == "tools/call" and params["name"] == "get_node"
+        sample = {
+            "id": 99,
+            "name": "Primary Button",
+            "type": "FRAME",
+            "cornerRadius": 8,
+            "layout": {"mode": "horizontal", "padding": [12, 20, 12, 20], "mainAlign": "center", "crossAlign": "center"},
+            "fills": [{"type": "solid", "color": "#4F46E5"}],
+            "children": [
+                {"id": 100, "name": "Label", "type": "TEXT", "characters": "Deploy Now", "fontSize": 14, "fontStyle": "SemiBold", "fills": [{"type": "solid", "color": "#FFFFFF"}]}
+            ],
+        }
+        return {"result": {"content": [{"type": "text", "text": json.dumps({"node": sample})}]}}
+
+    gen_code = mcp_primitives.handle_custom_tool_call(
+        "figcraft_generate_code",
+        {"node_id": 99, "framework": "react-tailwind", "response_format": "json"},
+        mock_upstream,
+    )
+    assert gen_code.get("isError") is not True
+    gen_payload = json.loads(gen_code["content"][0]["text"])
+    assert gen_payload["component_name"] == "PrimaryButton"
+    assert '<button type="button"' in gen_payload["code"]
+    assert "bg-indigo-600" in gen_payload["code"]
+
+    gen_bad_fw = mcp_primitives.handle_custom_tool_call(
+        "figcraft_generate_code",
+        {"node_id": 99, "framework": "angular"},
+        mock_upstream,
+    )
+    assert gen_bad_fw.get("isError") is True
+    print("  [PASS] Custom prompt rendering & figcraft_generate_code tool")
 
 
 def test_bridge_e2e_stdio() -> None:
@@ -172,8 +206,10 @@ def test_bridge_e2e_stdio() -> None:
         assert "create_node" in tools
         assert "figcraft_get_tokens" in tools
         assert "figcraft_extract_semantic_ast" in tools
+        assert "figcraft_generate_code" in tools
         assert tools["figcraft_get_tokens"]["annotations"]["readOnlyHint"] is True
         assert tools["figcraft_extract_semantic_ast"]["annotations"]["readOnlyHint"] is True
+        assert tools["figcraft_generate_code"]["annotations"]["readOnlyHint"] is True
 
         # 3. resources/list merged
         res_list = rpc("resources/list", {}, 3)

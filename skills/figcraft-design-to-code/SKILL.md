@@ -1,34 +1,31 @@
 ---
 name: figcraft-design-to-code
-description: Converts FigCraft canvas designs and selected frames into production-ready frontend code (React + Tailwind CSS, Flutter, Vue, or HTML/CSS). Use when the user asks to "convert FigCraft to code", "export frame as React", "generate Flutter from FigCraft", or "turn this design into code".
+description: Converts FigCraft canvas designs and selected frames into production-ready frontend code (React + Tailwind CSS, Vue 3, Flutter, or HTML/CSS) with typed props mapping. Use when the user asks to "convert FigCraft to code", "export frame as React", "generate Flutter from FigCraft", or "turn this design into code".
 ---
 
 # FigCraft Design-to-Code Skill
 
-You are an expert Frontend Engineer and Design Systems specialist. Your task is to inspect UI elements on the FigCraft canvas and translate them with pixel-perfect fidelity into clean, production-grade frontend code.
+You are an expert Frontend Engineer and Design Systems specialist. Your task is to inspect UI elements on the FigCraft canvas and translate them with pixel-perfect fidelity into clean, typed, production-grade frontend code.
 
-## 1. Inspection Workflow
+## 1. Inspection & Generation Workflow
 
-When the user asks to convert a frame/component from FigCraft:
+When the user asks to convert a frame or component from FigCraft:
+
 1. **Locate the Node**:
-   - Call MCP tool `inspect_document` to see the layer hierarchy, or ask the user for the frame ID/name.
-   - Or run the helper: `python codegen_helper.py --node <ID>` to obtain the cleaned, tokenized UI tree.
-2. **Examine Semantic Tokens**:
-   - `direction`: "col" (vertical stack) or "row" (horizontal stack).
-   - `p`: padding in pixels.
-   - `gap`: spacing between children in pixels.
-   - `justify` & `items`: flex alignment.
-   - `rounded`: corner radius in pixels.
-   - `bg`: background hex color.
-   - `text`, `fontSize`, `color`: typography tokens.
-3. **Generate Idiomatic Code**:
-   - Map tokens cleanly to the requested framework (React + Tailwind CSS by default).
-4. **Visual Self-Verification**:
-   - Call the `screenshot` tool on that node ID to visually cross-check alignment, contrast, and layout.
+   - Read resource `figcraft://canvas/semantic` (or call `inspect_document` / `figcraft_extract_semantic_ast`) to discover layer IDs and hierarchy.
+2. **Generate Baseline Code via MCP Tool or CLI**:
+   - **MCP Tool (Recommended)**: Call `figcraft_generate_code` with `node_id`, `framework` (`react-tailwind` | `vue` | `flutter` | `html-css`), optional `component_name`, and `include_props: true`.
+   - **CLI Helper**: `python codegen_helper.py --node <ID> --framework react-tailwind`
+   - **Semantic AST Only**: Read `figcraft://node/{id}/semantic` or call `figcraft_extract_semantic_ast(node_id=<ID>)`.
+3. **Inspect Typed Props & Tokens**:
+   - Colors, spacing, corner radii, and font sizes are automatically reverse-mapped against `tokens.json` (`#1E293B` -> `slate-800`, `20px` -> `p-5`, `16px` -> `rounded-2xl`), falling back to arbitrary values when custom tokens are used.
+   - Named text layers, explicit `componentPropertyDefinitions` (`TEXT`, `BOOLEAN`, `VARIANT`, `SLOT`), and empty slot frames are automatically exposed as typed component props (`Props` interface in TS/Vue or `final` fields in Flutter).
+4. **Refine & Visually Verify**:
+   - Call `screenshot` on `node_id` to visually cross-check spacing, alignment, contrast, and typography against the generated component.
 
 ---
 
-## 2. Token Mapping Table
+## 2. Token Mapping Reference
 
 ### A. React + Tailwind CSS (Default)
 
@@ -36,30 +33,29 @@ When the user asks to convert a frame/component from FigCraft:
 | :--- | :--- | :--- |
 | `direction: "col"` | `flex flex-col` | `<div className="flex flex-col ...">` |
 | `direction: "row"` | `flex flex-row` | `<div className="flex flex-row ...">` |
-| `p: 20` / `p: 24` | `p-5` / `p-6` | `p-6` (or arbitrary `p-[20px]`) |
+| `p: 20` / `px: 24, py: 12` | `p-5` / `px-6 py-3` | Uses `tokens.json` scale or `p-[18px]` |
 | `gap: 12` / `gap: 16` | `gap-3` / `gap-4` | `gap-4` |
 | `justify: "between"` | `justify-between` | `justify-between` |
-| `justify: "center"` | `justify-center` | `justify-center` |
 | `items: "center"` | `items-center` | `items-center` |
-| `rounded: 16` / `24` | `rounded-2xl` / `rounded-3xl` | `rounded-2xl` (or `rounded-[16px]`) |
-| `bg: "#0F172A"` | `bg-[#0F172A]` or `bg-slate-900` | `bg-[#0F172A]` |
-| `fontSize: 34`, bold | `text-3xl font-bold` | `text-3xl font-bold text-white` |
-| `color: "#38BDF8"` | `text-[#38BDF8]` or `text-sky-400` | `text-sky-400` |
+| `rounded: 16` / `9999` | `rounded-2xl` / `rounded-full` | `rounded-2xl` |
+| `bg: "#0F172A"` | `bg-slate-900` | Reverse-mapped from `tokens.json` |
+| `borderColor` + `borderWidth` | `border border-slate-700` | `border-[2px]` when width > 1 |
+| `fontStyle: "Bold"` | `font-bold` | Mapped from FigCraft `fontStyle` |
+| `role: "button"` / `"nav"` | `<button type="button">` / `<nav>` | Semantic HTML tag selection |
 
-### B. Flutter (Dart)
+### B. Vue 3 SFC (`framework: "vue"`)
+- Emits `<script setup lang="ts">` with `interface Props` and `withDefaults(defineProps<Props>(), ...)`.
+- Emits `<template>` using Tailwind classes and `<slot name="..." />` for slot containers.
 
-| FigCraft Token | Flutter Widget / Property |
-| :--- | :--- |
-| `direction: "col"` | `Column(children: [...])` |
-| `direction: "row"` | `Row(children: [...])` |
-| `p: 20` | `padding: EdgeInsets.all(20.0)` |
-| `gap: 12` | `SizedBox(height: 12)` / `SizedBox(width: 12)` |
-| `rounded: 16` + `bg` | `decoration: BoxDecoration(color: Color(0xFF...), borderRadius: BorderRadius.circular(16))` |
-| `text: "..."` | `Text('...', style: TextStyle(fontSize: 16, color: Color(0xFF...)))` |
+### C. Flutter (`framework: "flutter"`)
+- Emits `StatelessWidget` with `const` constructor, typed `final` fields, `Container` + `BoxDecoration` (`Color(0xFF...)`, `BorderRadius.circular(...)`, `Border.all(...)`), `Column` / `Row`, and `SizedBox` gaps.
+
+### D. Semantic HTML + CSS (`framework: "html-css"`)
+- Emits scoped BEM-style `.component__layer` CSS rules inside `<style>` with semantic HTML5 markup.
 
 ---
 
 ## 3. Best Practices for Generated Code
 - **Never hardcode arbitrary pixel coordinates** (`top: 120px, left: 340px`). Always translate FigCraft auto-layout into responsive flexbox / grid.
-- **Semantic Components**: Use `<button>` for clickable elements, `<header>` or `<nav>` for bars, and proper typography tags (`<h1>`, `<p>`, `<span>`).
-- **Export Ready**: Output self-contained, typed components with clear prop interfaces.
+- **Props over Hardcoded Copy**: Expose text layers and component variants as typed optional props with canvas values as defaults so generated components are immediately reusable.
+- **Accessible Semantics**: Preserve `<button type="button">`, `<nav>`, `<header>`, `<footer>`, and heading hierarchy (`<h1>`, `<h2>`, `<h3>`).

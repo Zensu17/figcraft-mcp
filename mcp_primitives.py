@@ -16,7 +16,7 @@ import re
 from pathlib import Path
 from typing import Any, Callable
 
-from codegen_helper import clean_node
+from codegen_helper import SUPPORTED_FRAMEWORKS, clean_node, generate_code
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 TOKENS_PATH = SCRIPT_DIR / "tokens.json"
@@ -33,7 +33,7 @@ ENGINE_GUARDRAIL_INSTRUCTIONS = (
     "- Bridge Resources: `figcraft://tokens` (design tokens), `figcraft://guidelines` (design rules), "
     "`figcraft://canvas/semantic` (cleaned semantic AST of active document), "
     "`figcraft://node/{id}/semantic` (cleaned semantic AST of one node).\n"
-    "- Bridge Workflow Tools: `figcraft_get_tokens` and `figcraft_extract_semantic_ast`."
+    "- Bridge Workflow Tools: `figcraft_get_tokens`, `figcraft_extract_semantic_ast`, and `figcraft_generate_code`."
 )
 
 CUSTOM_RESOURCES: list[dict[str, Any]] = [
@@ -251,6 +251,55 @@ CUSTOM_TOOLS: list[dict[str, Any]] = [
         },
         "annotations": {
             "title": "Extract Semantic UI AST",
+            "readOnlyHint": True,
+            "destructiveHint": False,
+            "idempotentHint": True,
+            "openWorldHint": False,
+        },
+    },
+    {
+        "name": "figcraft_generate_code",
+        "title": "Generate Frontend Code from FigCraft Node",
+        "description": (
+            "Fetch a FigCraft layer by node_id, clean its semantic AST, reverse-map tokens.json "
+            "values, extract typed component props (Code Connect pattern), and generate idiomatic "
+            "React + Tailwind, Vue 3, Flutter, or semantic HTML/CSS code."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "node_id": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "Numeric FigCraft layer ID to convert into frontend code.",
+                },
+                "framework": {
+                    "type": "string",
+                    "enum": list(SUPPORTED_FRAMEWORKS),
+                    "default": "react-tailwind",
+                    "description": "Target frontend framework: 'react-tailwind', 'vue', 'flutter', or 'html-css'.",
+                },
+                "component_name": {
+                    "type": "string",
+                    "description": "Optional PascalCase component name override. Auto-derived from layer name if omitted.",
+                },
+                "include_props": {
+                    "type": "boolean",
+                    "default": True,
+                    "description": "Extract text layers, slots, and componentPropertyDefinitions into typed props.",
+                },
+                "response_format": {
+                    "type": "string",
+                    "enum": ["code", "json"],
+                    "default": "code",
+                    "description": "'code' returns generated source directly; 'json' returns {component_name, framework, props, code, ast}.",
+                },
+            },
+            "required": ["node_id"],
+            "additionalProperties": False,
+        },
+        "annotations": {
+            "title": "Generate Frontend Code from FigCraft Node",
             "readOnlyHint": True,
             "destructiveHint": False,
             "idempotentHint": True,
@@ -728,12 +777,12 @@ def handle_custom_prompt_get(name: str, arguments: dict[str, Any] | None) -> dic
         framework = str(args.get("framework", "react-tailwind")).strip().lower() or "react-tailwind"
         prompt_text = (
             f"Convert FigCraft layer #{raw_node_id} into production-grade `{framework}` code:\n"
-            f"1. Read the compact semantic AST via resource `figcraft://node/{raw_node_id}/semantic` "
-            f"(or call tool `figcraft_extract_semantic_ast` with `node_id: {raw_node_id}`).\n"
-            f"2. Optionally read `figcraft://tokens` to align hex colors, spacing, and corner radii to named tokens.\n"
+            f"1. Call tool `figcraft_generate_code` with `node_id: {raw_node_id}` and `framework: \"{framework}\"` "
+            f"(or inspect `figcraft://node/{raw_node_id}/semantic` directly).\n"
+            f"2. Optionally read `figcraft://tokens` to verify named token mappings.\n"
             f"3. Capture a reference visual with `screenshot` for layer {raw_node_id}.\n"
-            f"4. Generate clean, accessible, responsive `{framework}` component code preserving hierarchy, "
-            f"flex direction, padding, gap, typography scale, and colors."
+            f"4. Review and refine the generated `{framework}` component preserving typed props, "
+            f"flex direction, padding, gap, typography scale, and accessibility."
         )
         return {
             "description": f"Convert FigCraft node #{raw_node_id} to {framework}",
@@ -854,6 +903,86 @@ def handle_custom_tool_call(
                         "text": (
                             f"Failed to extract semantic AST: {e}. "
                             "Verify the node_id exists using inspect_document first."
+                        ),
+                    }
+                ],
+            }
+
+    if name == "figcraft_generate_code":
+        node_id = args.get("node_id")
+        framework = str(args.get("framework", "react-tailwind")).strip().lower()
+        component_name = args.get("component_name")
+        include_props = args.get("include_props", True)
+        response_format = str(args.get("response_format", "code")).strip().lower()
+
+        if node_id is None or isinstance(node_id, bool) or not isinstance(node_id, int) or node_id <= 0:
+            return {
+                "isError": True,
+                "content": [
+                    {
+                        "type": "text",
+                        "text": (
+                            f"Invalid or missing node_id '{node_id}'. Provide a positive integer layer ID "
+                            "(find IDs via figcraft://canvas/semantic or inspect_document)."
+                        ),
+                    }
+                ],
+            }
+
+        if framework not in SUPPORTED_FRAMEWORKS:
+            return {
+                "isError": True,
+                "content": [
+                    {
+                        "type": "text",
+                        "text": (
+                            f"Unsupported framework '{framework}'. "
+                            f"Choose one of: {', '.join(SUPPORTED_FRAMEWORKS)}."
+                        ),
+                    }
+                ],
+            }
+
+        if response_format not in ("code", "json"):
+            return {
+                "isError": True,
+                "content": [
+                    {
+                        "type": "text",
+                        "text": f"Invalid response_format '{response_format}'. Use 'code' or 'json'.",
+                    }
+                ],
+            }
+
+        if not isinstance(include_props, bool):
+            return {
+                "isError": True,
+                "content": [{"type": "text", "text": "Invalid include_props: expected boolean."}],
+            }
+
+        try:
+            raw_payload = _fetch_upstream_tool_json(upstream_call, "get_node", {"id": node_id})
+            raw_node = raw_payload.get("node", raw_payload)
+            ast_data = _clean_node_preserving_id(raw_node)
+            generated = generate_code(
+                ast_data,
+                framework=framework,
+                component_name=str(component_name) if component_name else None,
+                include_props=include_props,
+            )
+            if response_format == "json":
+                payload = {**generated, "ast": ast_data}
+                return {"content": [{"type": "text", "text": json.dumps(payload, indent=2)}]}
+            return {"content": [{"type": "text", "text": generated["code"]}]}
+        except Exception as e:
+            return {
+                "isError": True,
+                "content": [
+                    {
+                        "type": "text",
+                        "text": (
+                            f"Failed to generate {framework} code for node {node_id}: {e}. "
+                            "Verify the node_id exists using figcraft://canvas/semantic first."
                         ),
                     }
                 ],
