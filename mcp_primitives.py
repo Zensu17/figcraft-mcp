@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from codegen_helper import SUPPORTED_FRAMEWORKS, clean_node, generate_code
+from tokens import SUPPORTED_TEMPLATES, build_template_commands, list_themes
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 TOKENS_PATH = SCRIPT_DIR / "tokens.json"
@@ -33,7 +34,7 @@ ENGINE_GUARDRAIL_INSTRUCTIONS = (
     "- Bridge Resources: `figcraft://tokens` (design tokens), `figcraft://guidelines` (design rules), "
     "`figcraft://canvas/semantic` (cleaned semantic AST of active document), "
     "`figcraft://node/{id}/semantic` (cleaned semantic AST of one node).\n"
-    "- Bridge Workflow Tools: `figcraft_get_tokens`, `figcraft_extract_semantic_ast`, and `figcraft_generate_code`."
+    "- Bridge Workflow Tools: `figcraft_get_tokens`, `figcraft_extract_semantic_ast`, `figcraft_generate_code`, and `figcraft_render_template`."
 )
 
 CUSTOM_RESOURCES: list[dict[str, Any]] = [
@@ -204,7 +205,7 @@ CUSTOM_TOOLS: list[dict[str, Any]] = [
             "properties": {
                 "category": {
                     "type": "string",
-                    "enum": ["colors", "spacing", "radius", "typography", "fontWeight"],
+                    "enum": ["colors", "themes", "semantic", "spacing", "radius", "typography", "fontWeight"],
                     "description": "Optional token category to return. Omit to return all categories.",
                 },
                 "response_format": {
@@ -303,6 +304,59 @@ CUSTOM_TOOLS: list[dict[str, Any]] = [
             "readOnlyHint": True,
             "destructiveHint": False,
             "idempotentHint": True,
+            "openWorldHint": False,
+        },
+    },
+    {
+        "name": "figcraft_render_template",
+        "title": "Render Curated UI Component Template",
+        "description": (
+            "Render a WCAG-verified, anti-slop UI component kit onto the FigCraft canvas "
+            "as a single undoable batch operation (buttons, badges, segmented_control, "
+            "data_table, state_cards, theme_board, or palette_swatch). Set dry_run=true to "
+            "preview the batch JSON without modifying the canvas."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "template": {
+                    "type": "string",
+                    "enum": list(SUPPORTED_TEMPLATES),
+                    "description": "Template name to render onto the canvas.",
+                },
+                "theme": {
+                    "type": "string",
+                    "enum": list_themes(),
+                    "default": "obsidian-studio",
+                    "description": "Curated WCAG AA theme preset.",
+                },
+                "palette": {
+                    "type": "string",
+                    "default": "indigo",
+                    "description": "Palette name when template='palette_swatch' (e.g. indigo, stone, slate, emerald).",
+                },
+                "x": {
+                    "type": "integer",
+                    "description": "Optional page X coordinate override.",
+                },
+                "y": {
+                    "type": "integer",
+                    "description": "Optional page Y coordinate override.",
+                },
+                "dry_run": {
+                    "type": "boolean",
+                    "default": False,
+                    "description": "If true, return the batch command payload JSON without modifying the canvas.",
+                },
+            },
+            "required": ["template"],
+            "additionalProperties": False,
+        },
+        "annotations": {
+            "title": "Render Curated UI Component Template",
+            "readOnlyHint": False,
+            "destructiveHint": False,
+            "idempotentHint": False,
             "openWorldHint": False,
         },
     },
@@ -498,7 +552,7 @@ def _load_tokens_json() -> dict[str, Any]:
 def format_tokens_markdown(tokens_data: dict[str, Any], category: str | None = None) -> str:
     """Format design tokens as concise Markdown for human/LLM inspection."""
     lines: list[str] = [f"# {tokens_data.get('name', 'FigCraft Design Tokens')}"]
-    categories = [category] if category else ["colors", "spacing", "radius", "typography", "fontWeight"]
+    categories = [category] if category else ["colors", "themes", "semantic", "spacing", "radius", "typography", "fontWeight"]
 
     for cat in categories:
         if cat not in tokens_data:
@@ -510,6 +564,18 @@ def format_tokens_markdown(tokens_data: dict[str, Any], category: str | None = N
                 if isinstance(shades, dict):
                     swatch_str = ", ".join(f"{k}: `{v}`" for k, v in shades.items())
                     lines.append(f"- **{palette}**: {swatch_str}")
+        elif cat == "themes" and isinstance(section, dict):
+            for t_name, t_spec in section.items():
+                if isinstance(t_spec, dict):
+                    lines.append(
+                        f"- **{t_name}** ({t_spec.get('mode')}): surface `{t_spec.get('surface')}`, "
+                        f"elevated `{t_spec.get('surfaceElevated')}`, accent `{t_spec.get('accent')}` - {t_spec.get('description', '')}"
+                    )
+        elif cat == "semantic" and isinstance(section, dict):
+            for mode, statuses in section.items():
+                if isinstance(statuses, dict):
+                    st_str = ", ".join(f"{k}({v.get('fg')} on {v.get('bg')})" for k, v in statuses.items())
+                    lines.append(f"- **{mode}**: {st_str}")
         elif cat == "typography" and isinstance(section, dict):
             for scale, spec in section.items():
                 if isinstance(spec, dict):
@@ -803,7 +869,7 @@ def handle_custom_tool_call(
     if name == "figcraft_get_tokens":
         category = args.get("category")
         response_format = str(args.get("response_format", "json")).strip().lower()
-        valid_categories = {"colors", "spacing", "radius", "typography", "fontWeight"}
+        valid_categories = {"colors", "themes", "semantic", "spacing", "radius", "typography", "fontWeight"}
 
         if response_format not in ("json", "markdown"):
             return {
@@ -986,6 +1052,88 @@ def handle_custom_tool_call(
                         ),
                     }
                 ],
+            }
+
+    if name == "figcraft_render_template":
+        template_name = str(args.get("template", "")).strip().lower()
+        theme_name = str(args.get("theme", "obsidian-studio")).strip().lower()
+        palette_name = str(args.get("palette", "indigo")).strip().lower()
+        x = args.get("x")
+        y = args.get("y")
+        dry_run = args.get("dry_run", False)
+
+        if not isinstance(dry_run, bool):
+            return {
+                "isError": True,
+                "content": [{"type": "text", "text": "Invalid dry_run: expected boolean."}],
+            }
+        if x is not None and (isinstance(x, bool) or not isinstance(x, int)):
+            return {
+                "isError": True,
+                "content": [{"type": "text", "text": "Invalid x: expected integer."}],
+            }
+        if y is not None and (isinstance(y, bool) or not isinstance(y, int)):
+            return {
+                "isError": True,
+                "content": [{"type": "text", "text": "Invalid y: expected integer."}],
+            }
+
+        try:
+            commands = build_template_commands(
+                template_name,
+                theme_name=theme_name,
+                palette_name=palette_name,
+                x=x,
+                y=y,
+            )
+        except ValueError as exc:
+            return {
+                "isError": True,
+                "content": [{"type": "text", "text": str(exc)}],
+            }
+
+        if dry_run:
+            return {
+                "content": [
+                    {
+                        "type": "text",
+                        "text": json.dumps(
+                            {
+                                "template": template_name,
+                                "theme": theme_name,
+                                "stepCount": len(commands),
+                                "commands": commands,
+                            },
+                            indent=2,
+                        ),
+                    }
+                ]
+            }
+
+        try:
+            resp = upstream_call(
+                "tools/call",
+                {
+                    "name": "batch",
+                    "arguments": {
+                        "commands": commands,
+                        "onError": "abort",
+                        "label": f"Render {template_name} ({theme_name})",
+                    },
+                },
+            )
+            if "error" in resp:
+                err = resp["error"]
+                msg = err.get("message", str(err)) if isinstance(err, dict) else str(err)
+                return {
+                    "isError": True,
+                    "content": [{"type": "text", "text": f"Failed to render template '{template_name}': {msg}"}],
+                }
+            return resp.get("result", {"content": [{"type": "text", "text": "Rendered template."}]})
+        except Exception as exc:
+            return {
+                "isError": True,
+                "content": [{"type": "text", "text": f"Failed to render template '{template_name}': {exc}"}],
             }
 
     return {

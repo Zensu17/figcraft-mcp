@@ -158,7 +158,25 @@ def test_custom_prompt_rendering_and_validation() -> None:
         mock_upstream,
     )
     assert gen_bad_fw.get("isError") is True
-    print("  [PASS] Custom prompt rendering & figcraft_generate_code tool")
+
+    # Dry-run figcraft_render_template verification
+    tmpl_res = mcp_primitives.handle_custom_tool_call(
+        "figcraft_render_template",
+        {"template": "state_cards", "theme": "editorial-paper", "dry_run": True},
+        mock_upstream,
+    )
+    assert tmpl_res.get("isError") is not True
+    tmpl_payload = json.loads(tmpl_res["content"][0]["text"])
+    assert tmpl_payload["template"] == "state_cards"
+    assert tmpl_payload["stepCount"] > 5
+
+    tmpl_err = mcp_primitives.handle_custom_tool_call(
+        "figcraft_render_template",
+        {"template": "nonexistent", "dry_run": True},
+        mock_upstream,
+    )
+    assert tmpl_err.get("isError") is True
+    print("  [PASS] Custom prompt rendering, figcraft_generate_code & figcraft_render_template")
 
 
 def test_bridge_e2e_stdio() -> None:
@@ -207,9 +225,11 @@ def test_bridge_e2e_stdio() -> None:
         assert "figcraft_get_tokens" in tools
         assert "figcraft_extract_semantic_ast" in tools
         assert "figcraft_generate_code" in tools
+        assert "figcraft_render_template" in tools
         assert tools["figcraft_get_tokens"]["annotations"]["readOnlyHint"] is True
         assert tools["figcraft_extract_semantic_ast"]["annotations"]["readOnlyHint"] is True
         assert tools["figcraft_generate_code"]["annotations"]["readOnlyHint"] is True
+        assert tools["figcraft_render_template"]["annotations"]["readOnlyHint"] is False
 
         # 3. resources/list merged
         res_list = rpc("resources/list", {}, 3)

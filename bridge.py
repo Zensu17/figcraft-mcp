@@ -448,7 +448,9 @@ class LazyMcpBridge:
             tool_name = str(params.get("name", ""))
 
             if mcp_primitives.is_custom_tool(tool_name):
-                if not mcp_primitives.is_local_only_tool(tool_name) and not self.is_attached:
+                tool_args = params.get("arguments") if isinstance(params.get("arguments"), dict) else {}
+                is_dry_run = tool_name == "figcraft_render_template" and tool_args.get("dry_run") is True
+                if not mcp_primitives.is_local_only_tool(tool_name) and not is_dry_run and not self.is_attached:
                     self.transition_to_attached()
                 if not has_id:
                     return

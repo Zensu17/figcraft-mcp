@@ -7,33 +7,31 @@ description: Expert interface designer for FigCraft. Use when the user asks to d
 
 FigCraft is an open-source, pure-Rust collaborative interface design tool that speaks MCP natively.
 
-## Coordinate & Layout Rules
+## 1. Coordinate & Engine Rules (Mandatory)
 - **Coordinates**: Page units (1 unit = 1 px at 100% zoom). X goes right, Y goes DOWN.
 - **Parent Relative**: `x` and `y` are relative to the parent frame (or page if no parent).
 - **Auto-Layout Alignment Enums**:
-  - `mainAlign`: `"min"`, `"center"`, `"max"`, `"spaceBetween"`, `"spaceAround"`, `"spaceEvenly"`. Note: do NOT use `"start"` or `"end"` (use `"min"` / `"max"`).
-  - `crossAlign`: `"min"`, `"center"`, `"max"`, `"baseline"`. Note: do NOT use `"start"` or `"end"` (use `"min"` / `"max"`).
+  - `mainAlign`: `"min"`, `"center"`, `"max"`, `"spaceBetween"`, `"spaceAround"`, `"spaceEvenly"`. Never use `"start"` or `"end"`.
+  - `crossAlign`: `"min"`, `"center"`, `"max"`, `"baseline"`. Never use `"start"` or `"end"`.
   - When auto-layout is enabled on a parent frame, do NOT set manual `x`/`y` on its children.
 - **MANDATORY: Transparent Layout Wrappers (`fill: "none"`)**:
-  - In FigCraft, any frame created without an explicit `fill` property defaults to solid opaque white (`#FFFFFF`).
-  - Therefore, you MUST explicitly specify `fill: "none"` for all structural wrapper frames (flex rows, columns, button groups, metric rows) unless an opaque background card color is specifically intended. Failure to set `fill: "none"` will result in opaque white rectangles covering dark-mode layouts.
+  - Frames created without an explicit `fill` property default to solid opaque white (`#FFFFFF`).
+  - Always set `fill: "none"` on structural layout wrappers (flex rows, button groups, header wrappers) unless an opaque surface card is intended.
+- **Property Naming**:
+  - Border: `stroke` (hex) and `strokeWeight` (number, NOT `strokeWidth`).
+  - Typography: `fontSize` (number), `fill` (text hex color), and `fontStyle` (`"Bold"`, `"SemiBold"`, `"Medium"`, `"Regular"`). Do not use `fontWeight: 700`.
 
-## Property Naming Reference
-- **Border Stroke**: Use `stroke` (hex color) and `strokeWeight` (number, NOT `strokeWidth`).
-- **Typography**: Use `fontSize` (number), `fill` (text color), and `fontStyle` (`"Bold"`, `"SemiBold"`, `"Medium"`, `"Regular"`). Do not use `fontWeight: 700` (use `fontStyle: "Bold"` instead).
+## 2. Visual Direction & Anti-Slop Craft Standards
+- **Palette Discipline**: Commit to 2-3 neutral surfaces plus 1 deliberate focal accent (never scatter 5+ accent hues or default blue-purple gradients across every element).
+- **Curated Themes (`tokens.json`)**: Prefer reading `figcraft://tokens` or calling `figcraft_get_tokens(category="themes")` to select an intentional theme (`editorial-paper`, `obsidian-studio`, `slate-instrument`, `botanical-ledger`).
+- **WCAG 2.2 AA Contrast Floor**: Every normal text layer must meet >= 4.5:1 contrast against its direct background surface (>= 3.0:1 for 18px+ bold headings).
+- **Content-Driven Hierarchy**:
+  - Avoid generic template chrome: no decorative capsule eyebrows above headings, no fabricated statistics or fake testimonials, no emoji clutter in UI labels, and no identical copy-paste card grids.
+  - Use active-verb, specific button copy ("Save changes", "Export CSV", "Delete project") instead of vague labels ("Submit", "Click here").
+  - Include real UI states (Empty, Loading, Error) that state the cause and next action for data-driven screens.
+  - Keep interactive buttons and touch targets at least 44px tall where mobile/touch usability applies.
 
-## Best Practices
-1. **Single Undo Batching**:
-   - For multi-layer components, combine steps using the `batch` tool with `onError: "abort"`.
-   - Steps can reference previous step results using `{"$ref": "stepName"}`.
-2. **Hierarchy**:
-   - Create parent container frames first, then pass `parent: container_id` to children.
-3. **Visual Self-Verification**:
-   - After creating or modifying a layout, call `screenshot` (with layer `ids` or whole page) to visually confirm padding, colors, contrast, and alignment.
-4. **Color and Layout Tokens**:
-   - Adhere to standard design tokens defined in `tokens.json`:
-     - Backgrounds: Dark slate (`#0F172A`, `#1E293B`) or zinc (`#18181B`, `#27272A`).
-     - Accents: Indigo (`#4F46E5`, `#6366F1`) or Sky (`#0284C7`, `#38BDF8`).
-     - Radius scale: `sm` (2px), `default` (4px), `md` (6px), `lg` (8px), `xl` (12px), `2xl` (16px).
-     - Spacing scale: multiples of 4px (8px, 12px, 16px, 20px, 24px, 32px).
-   - Use high contrast ratios between text and background fills.
+## 3. Workflow & Single-Undo Templates
+1. **Reusable Templates**: Use MCP tool `figcraft_render_template` (`buttons`, `badges`, `segmented_control`, `data_table`, `state_cards`, `theme_board`, `palette_swatch`) to drop WCAG-verified component kits onto the canvas in a single undo step.
+2. **Custom Multi-Layer Layouts**: Combine steps with `batch` (`onError: "abort"`) and `{"$ref": "stepName"}` parent references.
+3. **Visual Self-Verification**: Always call `screenshot` after creating or modifying frames to verify contrast, spacing, alignment, and absence of opaque wrapper leaks.
