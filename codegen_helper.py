@@ -20,6 +20,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+import security
+
 SCRIPT_DIR = Path(__file__).resolve().parent
 BRIDGE_PATH = SCRIPT_DIR / "bridge.py"
 TOKENS_PATH = SCRIPT_DIR / "tokens.json"
@@ -448,9 +450,12 @@ def extract_component_props(ast_node: dict[str, Any]) -> tuple[list[dict[str, An
 
 
 def _tw_color(prefix: str, hex_color: str) -> str:
+    safe_hex = security.validate_hex_color(hex_color)
+    if not safe_hex:
+        return ""
     tokens = _load_token_maps()["colors"]
-    matched = tokens.get(hex_color.upper())
-    return f"{prefix}-{matched}" if matched else f"{prefix}-[{hex_color}]"
+    matched = tokens.get(safe_hex.upper())
+    return f"{prefix}-{matched}" if matched else f"{prefix}-[{safe_hex}]"
 
 
 def _tw_spacing(prefix: str, px: int) -> str:
@@ -586,7 +591,12 @@ def _escape_dart_string(text: str) -> str:
 
 
 def _hex_to_dart_color(hex_color: str) -> str:
-    cleaned = hex_color.strip().lstrip("#").upper()
+    safe_hex = security.validate_hex_color(hex_color)
+    if not safe_hex:
+        return "Color(0xFFFFFFFF)"
+    cleaned = safe_hex.lstrip("#").upper()
+    if len(cleaned) == 3:
+        cleaned = "".join(ch * 2 for ch in cleaned)
     if len(cleaned) == 6:
         return f"Color(0xFF{cleaned})"
     if len(cleaned) == 8:
@@ -703,7 +713,11 @@ def _render_vue_node(
 
     if node.get("type") == "text":
         prop_name = bindings.get(id(node)) if include_props else None
-        content = f"{{{{ props.{prop_name} }}}}" if prop_name else html.escape(str(node.get("text", "")))
+        if prop_name:
+            content = f"{{{{ props.{prop_name} }}}}"
+        else:
+            escaped = html.escape(str(node.get("text", "")))
+            content = escaped.replace("{{", "&#123;&#123;").replace("}}", "&#125;&#125;")
         return f"{pad}<{tag}{cls_attr}>{content}</{tag}>"
 
     slot_prop = bindings.get(id(node)) if include_props else None
@@ -914,7 +928,9 @@ def generate_html_css(ast_node: dict[str, Any], component_name: str) -> str:
             if style_key in _FONT_STYLE_TO_CSS:
                 decls.append(f"font-weight: {_FONT_STYLE_TO_CSS[style_key]};")
             if "color" in node:
-                decls.append(f"color: {node['color']};")
+                safe_c = security.validate_hex_color(node["color"])
+                if safe_c:
+                    decls.append(f"color: {safe_c};")
             if "textAlign" in node:
                 decls.append(f"text-align: {node['textAlign']};")
             if decls:
@@ -937,12 +953,15 @@ def generate_html_css(ast_node: dict[str, Any], component_name: str) -> str:
         if "gap" in node:
             decls.append(f"gap: {node['gap']}px;")
         if "bg" in node:
-            decls.append(f"background-color: {node['bg']};")
+            safe_bg = security.validate_hex_color(node["bg"])
+            if safe_bg:
+                decls.append(f"background-color: {safe_bg};")
         if "rounded" in node:
             decls.append(f"border-radius: {node['rounded']}px;")
         if "borderColor" in node or "borderWidth" in node:
+            safe_bc = security.validate_hex_color(node.get("borderColor")) or "#334155"
             decls.append(
-                f"border: {node.get('borderWidth', 1)}px solid {node.get('borderColor', '#334155')};"
+                f"border: {node.get('borderWidth', 1)}px solid {safe_bc};"
             )
         j_map = {
             "start": "flex-start",

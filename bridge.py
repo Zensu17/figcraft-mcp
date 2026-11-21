@@ -28,16 +28,24 @@ from pathlib import Path
 from typing import Any, Callable
 
 import mcp_primitives
+import security
 
-DEFAULT_PORT = int(os.environ.get("FIGCRAFT_PORT", "1984"))
+try:
+    DEFAULT_PORT = security.validate_port(os.environ.get("FIGCRAFT_PORT", "1984"))
+except ValueError as _port_err:
+    sys.stderr.write(f"[FigCraft Bridge] Warning: {_port_err} Falling back to 1984.\n")
+    sys.stderr.flush()
+    DEFAULT_PORT = 1984
+
 HOST = "127.0.0.1"
 LOG_FILE = Path(__file__).resolve().parent / "figcraft_bridge.log"
 
 
 def log_debug(msg: str) -> None:
     if os.environ.get("FIGCRAFT_DEBUG"):
+        safe_msg = security.sanitize_log_message(msg)
         with open(LOG_FILE, "a", encoding="utf-8") as f:
-            f.write(f"[{time.strftime('%X')}] {msg}\n")
+            f.write(f"[{time.strftime('%X')}] {safe_msg}\n")
 
 
 def find_figcraft_binaries() -> tuple[Path | None, Path | None]:
@@ -356,19 +364,33 @@ class LazyMcpBridge:
 
     def _handle_client_message(self, raw_line: str) -> None:
         try:
+            security.validate_raw_line_size(raw_line)
+        except ValueError as exc:
+            self._write_client(_jsonrpc_error(None, -32600, str(exc)))
+            return
+
+        try:
             msg = json.loads(raw_line)
         except json.JSONDecodeError:
-            self._write_upstream(raw_line)
+            self._write_client(_jsonrpc_error(None, -32700, "Parse error: invalid JSON-RPC message."))
             return
 
         if not isinstance(msg, dict):
-            self._write_upstream(raw_line)
+            self._write_client(_jsonrpc_error(None, -32600, "Invalid Request: expected JSON object."))
+            return
+
+        req_id = msg.get("id")
+        has_id = "id" in msg
+
+        try:
+            security.validate_json_depth(msg)
+        except ValueError as exc:
+            if has_id:
+                self._write_client(_jsonrpc_error(req_id, -32600, str(exc)))
             return
 
         method = msg.get("method", "")
         params = msg.get("params") if isinstance(msg.get("params"), dict) else {}
-        req_id = msg.get("id")
-        has_id = "id" in msg
 
         # 1. Protocol discovery & capability enrichment (stays headless)
         if method == "initialize":
@@ -443,8 +465,26 @@ class LazyMcpBridge:
             self._write_upstream(msg)
             return
 
-        # 4. Tools Call (custom workflow tools + input normalization + lazy attach)
+        # 4. Tools Call (boundary security check + custom workflow tools + normalization + lazy attach)
         if method == "tools/call":
+            try:
+                security.validate_tool_call_security(params)
+            except ValueError as exc:
+                log_debug(f"Blocked unsafe tools/call: {exc}")
+                if has_id:
+                    self._write_client(
+                        _jsonrpc_result(
+                            req_id,
+                            {
+                                "isError": True,
+                                "content": [
+                                    {"type": "text", "text": f"Security policy blocked tool call: {exc}"}
+                                ],
+                            },
+                        )
+                    )
+                return
+
             tool_name = str(params.get("name", ""))
 
             if mcp_primitives.is_custom_tool(tool_name):
